@@ -95,7 +95,7 @@ export class Backend extends Construct {
       command: [
         "/bin/sh",
         "-c",
-        "echo $PRIVATE_KEY > ./mnemonic && npm start -- evm --endpoint $ENDPOINT --price-service-endpoint $PRICE_SERVICE_ENDPOINT --pyth-contract-address $PYTH_CONTRACT_ADDRESS --enable-metrics $ENABLE_METRICS --mnemonic-file ./mnemonic --price-config-file $PRICE_CONFIG_FILE --log-level info",
+        "echo $PRIVATE_KEY > ./mnemonic && npm start -- evm --endpoint $ENDPOINT --price-service-endpoint $PRICE_SERVICE_ENDPOINT --pyth-contract-address $PYTH_CONTRACT_ADDRESS --enable-metrics $ENABLE_METRICS --mnemonic-file ./mnemonic --price-config-file $PRICE_CONFIG_FILE --log-level warn",
       ],
       logging: ecs.LogDriver.awsLogs({
         streamPrefix: "hypurr-price-pusher",
