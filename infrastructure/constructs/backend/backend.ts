@@ -83,19 +83,19 @@ export class Backend extends Construct {
       memoryLimitMiB: 2048,
       environment: {
         ...props.containerEnvironment,
-        ENDPOINT: "https://bsc-dataseed2.binance.org",
+        ENDPOINT: "https://rpc.hyperliquid.xyz/evm",
         PRICE_SERVICE_ENDPOINT: "https://hermes.pyth.network",
-        PYTH_CONTRACT_ADDRESS: "0xd7308b14BF4008e7C7196eC35610B1427C5702EA",
+        PYTH_CONTRACT_ADDRESS: "0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc",
         PRICE_CONFIG_FILE: "./price-config.hypurr.yaml",
         ENABLE_METRICS: "false",
       },
       secrets: {
-        MNEMONIC: ecs.Secret.fromSecretsManager(pricePusherSecret, "MNEMONIC"),
+        PRIVATE_KEY: ecs.Secret.fromSecretsManager(pricePusherSecret, "PRIVATE_KEY"),
       },
       command: [
         "/bin/sh",
         "-c",
-        "echo $MNEMONIC > ./mnemonic && npm start -- evm --endpoint $ENDPOINT --price-service-endpoint $PRICE_SERVICE_ENDPOINT --pyth-contract-address $PYTH_CONTRACT_ADDRESS --enable-metrics $ENABLE_METRICS --mnemonic-file ./mnemonic --price-config-file $PRICE_CONFIG_FILE",
+        "echo $PRIVATE_KEY > ./mnemonic && npm start -- evm --endpoint $ENDPOINT --price-service-endpoint $PRICE_SERVICE_ENDPOINT --pyth-contract-address $PYTH_CONTRACT_ADDRESS --enable-metrics $ENABLE_METRICS --mnemonic-file ./mnemonic --price-config-file $PRICE_CONFIG_FILE --log-level info",
       ],
       logging: ecs.LogDriver.awsLogs({
         streamPrefix: "hypurr-price-pusher",

@@ -15,7 +15,7 @@ import {
   HttpTransport,
   Transport,
 } from "viem";
-import { mnemonicToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "viem/accounts";
 import * as chains from "viem/chains";
 import { isWsEndpoint } from "../utils";
 
@@ -65,7 +65,7 @@ export const createClient = async (
 
   return createWalletClient({
     transport,
-    account: mnemonicToAccount(mnemonic),
+    account: privateKeyToAccount(mnemonic as `0x${string}`),
     chain: getChainById(chainId),
   }).extend(publicActions);
 };
