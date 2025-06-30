@@ -53,3 +53,8 @@
     time_difference: 60
     price_deviation: 1
     confidence_ratio: 100
+  - alias: XAU/USD
+    id: 765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2
+    time_difference: 60
+    price_deviation: 1
+    confidence_ratio: 100
