@@ -68,3 +68,8 @@
     time_difference: 600
     price_deviation: 1
     confidence_ratio: 100
+  - alias: USDC/USD
+    id: eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a
+    time_difference: 600
+    price_deviation: 1
+    confidence_ratio: 100
