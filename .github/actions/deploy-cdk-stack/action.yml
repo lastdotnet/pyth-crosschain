@@ -35,4 +35,6 @@ runs:
     - name: Deploy | cdk
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION: "1"
       run: npx cdk deploy --exclusively ${{ inputs.stacks }} --require-approval never ${{ inputs.deploy-parameters }}

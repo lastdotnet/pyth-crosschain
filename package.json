@@ -4,6 +4,7 @@
     "@biomejs/biome": "catalog:",
     "@cprussin/tsconfig": "catalog:",
     "@pythnetwork/create-pyth-package": "workspace:",
+    "@types/node": "^22.14.0",
     "aws-cdk": "2.99.1",
     "aws-cdk-lib": "2.99.1",
     "constructs": "^10.2.70",
