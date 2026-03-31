@@ -75,3 +75,27 @@
   time_difference: 60
   price_deviation: 1
   confidence_ratio: 100 
+
+- alias: BBHLP/USDC.RR
+  id: c9a2320d42eec4ba0fcfa753c97676330486854c27b4ee812bc4a9b4635e210d
+  time_difference: 60
+  price_deviation: 1
+  confidence_ratio: 100 
+
+- alias: UFART/USD
+  id: a210f55ff119d315002b5dc4f763b4e4114197028e45d6aca16498ab1433fb6d
+  time_difference: 60
+  price_deviation: 1
+  confidence_ratio: 100
+
+- alias: PUMP/USD
+  id: 7a01fca212788bba7c5bf8c9efd576a8a722f070d2c17596ff7bb609b8d5c3b9
+  time_difference: 60
+  price_deviation: 1
+  confidence_ratio: 100
+
+- alias: haHYPE/HYPE.RR
+  id: 19aec77cb70be18c66df7afd33da651d7b376fd26f7c06f2e8b77536c820a281
+  time_difference: 60
+  price_deviation: 1
+  confidence_ratio: 100
