@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "build:schemas": {
-      "dependsOn": ["//#install:modules", "pull:schema"],
+      "dependsOn": ["//#install:modules"],
       "inputs": ["schema.json"],
       "outputs": ["src/zodSchemas.ts"]
     },
