@@ -20,7 +20,6 @@ const DEFAULT_RPC_ADDR: &str = "127.0.0.1:7777";
 #[command(author = crate_authors!())]
 #[command(about = crate_description!())]
 #[command(version = crate_version!())]
-#[allow(clippy::large_enum_variant)]
 pub enum Options {
     /// Run the Argus keeper service.
     Run(RunOptions),
@@ -160,10 +159,6 @@ impl Default for EscalationPolicyConfig {
 impl EscalationPolicyConfig {
     pub fn to_policy(&self) -> EscalationPolicy {
         EscalationPolicy {
-            gas_limit_tolerance_pct: self.gas_limit_tolerance_pct,
-            initial_gas_multiplier_pct: self.initial_gas_multiplier_pct,
-            gas_multiplier_pct: self.gas_multiplier_pct,
-            gas_multiplier_cap_pct: self.gas_multiplier_cap_pct,
             fee_multiplier_pct: self.fee_multiplier_pct,
             fee_multiplier_cap_pct: self.fee_multiplier_cap_pct,
         }

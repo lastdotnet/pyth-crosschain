@@ -19,17 +19,18 @@ import { AssetClassTable } from "./asset-class-table";
 import { ComingSoonList } from "./coming-soon-list";
 import styles from "./index.module.scss";
 import { PriceFeedsCard } from "./price-feeds-card";
-import { Cluster, getFeeds } from "../../services/pyth";
+import { Cluster } from "../../services/pyth";
+import { getFeeds } from "../../services/pyth/get-feeds";
 import { priceFeeds as priceFeedsStaticConfig } from "../../static-data/price-feeds";
 import { activeChains } from "../../static-data/stats";
 import { Cards } from "../Cards";
 import { LivePrice } from "../LivePrices";
+import { PriceCard } from "../PriceCard";
 import {
   YesterdaysPricesProvider,
   PriceFeedChangePercent,
 } from "../PriceFeedChangePercent";
 import { PriceFeedIcon } from "../PriceFeedIcon";
-import { PriceFeedTag } from "../PriceFeedTag";
 
 const PRICE_FEEDS_ANCHOR = "priceFeeds";
 
@@ -108,12 +109,7 @@ export const PriceFeeds = async () => {
             assetClass: feed.product.asset_type,
             description: feed.product.description,
             displaySymbol: feed.product.display_symbol,
-            icon: (
-              <PriceFeedIcon
-                assetClass={feed.product.asset_type}
-                symbol={feed.symbol}
-              />
-            ),
+            icon: <PriceFeedIcon assetClass={feed.product.asset_type} />,
           }))}
         />
       </section>
@@ -136,12 +132,7 @@ export const PriceFeeds = async () => {
               assetClass: feed.product.asset_type,
               description: feed.product.description,
               displaySymbol: feed.product.display_symbol,
-              icon: (
-                <PriceFeedIcon
-                  assetClass={feed.product.asset_type}
-                  symbol={feed.symbol}
-                />
-              ),
+              icon: <PriceFeedIcon assetClass={feed.product.asset_type} />,
             }))}
           />
         </UnstyledTabPanel>
@@ -209,12 +200,7 @@ const FeaturedFeeds = ({
                   description: feed.product.description,
                   displaySymbol: feed.product.display_symbol,
                   symbol: feed.symbol,
-                  icon: (
-                    <PriceFeedIcon
-                      assetClass={feed.product.asset_type}
-                      symbol={feed.symbol}
-                    />
-                  ),
+                  icon: <PriceFeedIcon assetClass={feed.product.asset_type} />,
                 }))}
               />
             ),
@@ -253,36 +239,26 @@ const FeaturedFeedsCard = <T extends ElementType>({
   <Card {...props}>
     <div className={styles.featuredFeedsCard}>
       {feeds.map((feed) => (
-        <Card
-          key={feed.product.price_account}
-          variant="tertiary"
+        <PriceCard
+          assetClass={feed.product.asset_type}
+          description={feed.product.description}
+          displaySymbol={feed.product.display_symbol}
           href={`/price-feeds/${encodeURIComponent(feed.symbol)}`}
+          key={feed.product.price_account}
         >
-          <div className={styles.feedCardContents}>
-            <PriceFeedTag
-              displaySymbol={feed.product.display_symbol}
-              description={feed.product.description}
-              icon={
-                <PriceFeedIcon
-                  assetClass={feed.product.asset_type}
-                  symbol={feed.symbol}
-                />
-              }
-            />
-            {showPrices && (
-              <div className={styles.prices}>
-                <LivePrice
-                  feedKey={feed.product.price_account}
-                  cluster={Cluster.Pythnet}
-                />
-                <PriceFeedChangePercent
-                  className={styles.changePercent}
-                  feedKey={feed.product.price_account}
-                />
-              </div>
-            )}
-          </div>
-        </Card>
+          {showPrices && (
+            <>
+              <LivePrice
+                feedKey={feed.product.price_account}
+                cluster={Cluster.Pythnet}
+              />
+              <PriceFeedChangePercent
+                className={styles.changePercent}
+                feedKey={feed.product.price_account}
+              />
+            </>
+          )}
+        </PriceCard>
       ))}
     </div>
   </Card>

@@ -1,25 +1,7 @@
 {
-  "name": "@pythnetwork/aptos-cli",
-  "version": "1.0.0",
-  "description": "Utilities for managing the Pyth Target Chain contract on Aptos",
-  "private": true,
-  "main": "index.js",
-  "scripts": {
-    "cli": "ts-node src/cli.ts",
-    "build": "tsc",
-    "test:format": "prettier --check .",
-    "fix:format": "prettier --write ."
-  },
   "author": "",
-  "license": "ISC",
   "bin": {
     "aptos": "./build/cli.js"
-  },
-  "devDependencies": {
-    "@types/node": "^18.7.21",
-    "@types/yargs": "^17.0.13",
-    "prettier": "catalog:",
-    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@pythnetwork/contract-manager": "workspace:*",
@@ -28,5 +10,59 @@
     "ethers": "^5.7.1",
     "js-sha3": "^0.8.0",
     "yargs": "^17.5.1"
-  }
+  },
+  "description": "Utilities for managing the Pyth Target Chain contract on Aptos",
+  "devDependencies": {
+    "@types/node": "^18.7.21",
+    "@types/yargs": "^17.0.13"
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "default": "./dist/esm/index.mjs",
+        "types": "./dist/esm/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/index.cjs",
+        "types": "./dist/cjs/index.d.ts"
+      }
+    },
+    "./cli": {
+      "import": {
+        "default": "./dist/esm/cli.mjs",
+        "types": "./dist/esm/cli.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/cli.cjs",
+        "types": "./dist/cjs/cli.d.ts"
+      }
+    },
+    "./commands/aptos": {
+      "import": {
+        "default": "./dist/esm/commands/aptos.mjs",
+        "types": "./dist/esm/commands/aptos.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/commands/aptos.cjs",
+        "types": "./dist/cjs/commands/aptos.d.ts"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "license": "ISC",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.mjs",
+  "name": "@pythnetwork/aptos-cli",
+  "private": true,
+  "scripts": {
+    "build": "ts-duality",
+    "clean": "rm -rf ./dist",
+    "cli": "ts-node src/cli.ts"
+  },
+  "type": "module",
+  "types": "./dist/cjs/index.d.ts",
+  "version": "1.1.0"
 }

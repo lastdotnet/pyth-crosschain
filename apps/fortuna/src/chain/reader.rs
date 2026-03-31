@@ -45,12 +45,12 @@ pub struct EntropyRequestInfo {
 }
 
 #[derive(Clone)]
-pub struct RequestedWithCallbackEvent {
+pub struct RequestedV2Event {
     pub sequence_number: u64,
     pub user_random_number: [u8; 32],
     pub provider_address: Address,
-    pub requestor: Address,
-    pub request: EntropyRequestInfo,
+    pub sender: Address,
+    pub gas_limit: u32,
     pub log_meta: LogMeta,
 }
 
@@ -60,8 +60,11 @@ pub trait EntropyReader: Send + Sync {
     /// Get an in-flight request (if it exists)
     /// Note that if we support additional blockchains in the future, the type of `provider` may
     /// need to become more generic.
-    async fn get_request(&self, provider: Address, sequence_number: u64)
-        -> Result<Option<Request>>;
+    async fn get_request_v2(
+        &self,
+        provider: Address,
+        sequence_number: u64,
+    ) -> Result<Option<Request>>;
 
     async fn get_block_number(&self, confirmed_block_status: BlockStatus) -> Result<BlockNumber>;
 
@@ -70,7 +73,7 @@ pub trait EntropyReader: Send + Sync {
         from_block: BlockNumber,
         to_block: BlockNumber,
         provider: Address,
-    ) -> Result<Vec<RequestedWithCallbackEvent>>;
+    ) -> Result<Vec<RequestedV2Event>>;
 
     /// Estimate the gas required to reveal a random number with a callback.
     async fn estimate_reveal_with_callback_gas(
@@ -93,12 +96,50 @@ pub struct Request {
     // The block number where this request was created
     pub block_number: BlockNumber,
     pub use_blockhash: bool,
+    pub callback_status: RequestCallbackStatus,
+    /// The gas limit for the request, in 10k gas units. (i.e., 2 = 20k gas).
+    pub gas_limit_10k: u16,
+}
+
+/// Status values for Request.callback_status
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RequestCallbackStatus {
+    /// Not a request with callback
+    CallbackNotNecessary = 0,
+    /// A request with callback where the callback hasn't been invoked yet
+    CallbackNotStarted = 1,
+    /// A request with callback where the callback is currently in flight (this state is a reentry guard)
+    CallbackInProgress = 2,
+    /// A request with callback where the callback has been invoked and failed
+    CallbackFailed = 3,
+}
+
+impl TryFrom<u8> for RequestCallbackStatus {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self> {
+        match value {
+            0 => Ok(RequestCallbackStatus::CallbackNotNecessary),
+            1 => Ok(RequestCallbackStatus::CallbackNotStarted),
+            2 => Ok(RequestCallbackStatus::CallbackInProgress),
+            3 => Ok(RequestCallbackStatus::CallbackFailed),
+            _ => Err(anyhow::anyhow!("Invalid callback status value: {}", value)),
+        }
+    }
+}
+
+impl From<RequestCallbackStatus> for u8 {
+    fn from(status: RequestCallbackStatus) -> Self {
+        status as u8
+    }
 }
 
 #[cfg(test)]
 pub mod mock {
     use {
-        crate::chain::reader::{BlockNumber, BlockStatus, EntropyReader, Request},
+        crate::chain::reader::{
+            BlockNumber, BlockStatus, EntropyReader, Request, RequestCallbackStatus,
+        },
         anyhow::Result,
         axum::async_trait,
         ethers::types::{Address, U256},
@@ -129,6 +170,8 @@ pub mod mock {
                             sequence_number: s,
                             block_number: b,
                             use_blockhash: u,
+                            callback_status: RequestCallbackStatus::CallbackNotNecessary,
+                            gas_limit_10k: 0,
                         })
                         .collect(),
                 ),
@@ -148,6 +191,8 @@ pub mod mock {
                 sequence_number: sequence,
                 block_number,
                 use_blockhash,
+                callback_status: RequestCallbackStatus::CallbackNotNecessary,
+                gas_limit_10k: 0,
             });
             self
         }
@@ -160,7 +205,7 @@ pub mod mock {
 
     #[async_trait]
     impl EntropyReader for MockEntropyReader {
-        async fn get_request(
+        async fn get_request_v2(
             &self,
             provider: Address,
             sequence_number: u64,
@@ -186,7 +231,7 @@ pub mod mock {
             _from_block: BlockNumber,
             _to_block: BlockNumber,
             _provider: Address,
-        ) -> Result<Vec<super::RequestedWithCallbackEvent>> {
+        ) -> Result<Vec<super::RequestedV2Event>> {
             Ok(vec![])
         }
 

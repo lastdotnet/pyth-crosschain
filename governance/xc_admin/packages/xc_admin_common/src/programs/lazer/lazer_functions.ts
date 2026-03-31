@@ -1,11 +1,12 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
-import { PythCluster } from "@pythnetwork/client";
-import {
-  ValidationResult,
-  DownloadableProduct,
+import type { PythCluster } from "@pythnetwork/client";
+import type { TransactionInstruction } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
+import type {
   DownloadableConfig,
-  ProgramType,
+  DownloadableProduct,
+  ValidationResult,
 } from "../types";
+import { ProgramType } from "../types";
 
 /**
  * Program ID for the Pyth Lazer program
@@ -21,7 +22,7 @@ export const LAZER_PROGRAM_ID = new PublicKey(
 export type LazerConfig = {
   programType: ProgramType.PYTH_LAZER;
   // Make cluster optional since Lazer might not be tied to a specific cluster
-  cluster?: PythCluster;
+  cluster?: PythCluster | undefined;
   // More generic data source instead of Solana-specific accounts
   feeds: LazerFeed[];
   // Additional metadata that might be relevant for Lazer
@@ -44,6 +45,7 @@ export type LazerConfigParams = {
 export interface LazerInstructionAccounts {
   fundingAccount: PublicKey;
   // Lazer-specific properties
+  // biome-ignore lint/suspicious/noExplicitAny: legacy typing
   lazerProgramClient?: any; // Replace with proper type when available
   cluster: PythCluster;
   additionalAccounts?: Record<string, PublicKey>;
@@ -95,14 +97,14 @@ export function getConfig(params: LazerConfigParams): LazerConfig {
 
   // Simulating some async operation
   return {
-    programType: ProgramType.PYTH_LAZER,
     // Include cluster if provided in options
     cluster: options?.cluster as PythCluster | undefined,
     feeds: [],
     metadata: {
-      source: endpoint ?? "unknown",
       network: network ?? "unknown",
+      source: endpoint ?? "unknown",
     },
+    programType: ProgramType.PYTH_LAZER,
   };
 }
 
@@ -119,19 +121,19 @@ export function getDownloadableConfig(config: LazerConfig): DownloadableConfig {
       {
         address: "",
         metadata: {
-          symbol: feed.id,
           asset_type: feed.metadata.asset_type?.toString() ?? "",
           country: feed.metadata.country?.toString() ?? "",
           quote_currency: feed.metadata.quote_currency?.toString() ?? "",
+          symbol: feed.id,
           tenor: feed.metadata.tenor?.toString() ?? "",
         },
         priceAccounts: [
           {
             address: "",
-            publishers: [],
             expo: 0,
-            minPub: 0,
             maxLatency: 0,
+            minPub: 0,
+            publishers: [],
           },
         ],
       },
@@ -148,30 +150,30 @@ export function getDownloadableConfig(config: LazerConfig): DownloadableConfig {
  * @returns Object with validation result and optional error message
  */
 export function validateUploadedConfig(
-  existingConfig: DownloadableConfig,
+  _: DownloadableConfig,
   uploadedConfig: unknown,
-  cluster: PythCluster,
+  __: PythCluster,
 ): ValidationResult {
   // Basic validation logic for Lazer config
   try {
     if (typeof uploadedConfig !== "object" || uploadedConfig === null) {
       return {
-        isValid: false,
         error: "Invalid JSON format for Lazer configuration",
+        isValid: false,
       };
     }
 
     // More detailed validation would be implemented here
     // For now, return not implemented error
     return {
-      isValid: false,
       error: "Uploading configuration for Pyth Lazer is not yet supported",
+      isValid: false,
     };
   } catch (error) {
     return {
-      isValid: false,
       error:
         error instanceof Error ? error.message : "Unknown validation error",
+      isValid: false,
     };
   }
 }
@@ -185,15 +187,15 @@ export function validateUploadedConfig(
  * @returns Promise resolving to an array of TransactionInstructions
  */
 export async function generateInstructions(
-  changes: Record<
+  _: Record<
     string,
     {
       prev?: Partial<DownloadableProduct>;
       new?: Partial<DownloadableProduct>;
     }
   >,
-  cluster: PythCluster,
-  accounts: LazerInstructionAccounts,
+  __: PythCluster,
+  ___: LazerInstructionAccounts,
 ): Promise<TransactionInstruction[]> {
   // Simple placeholder implementation that returns an empty array of instructions
   // In a real implementation, this would transform the changes into Lazer-specific instructions

@@ -1,10 +1,9 @@
+#![allow(clippy::same_name_method, reason = "generated code")]
+
 use {
     crate::{
         api::ChainId,
-        chain::reader::{
-            self, BlockNumber, BlockStatus, EntropyReader, EntropyRequestInfo,
-            RequestedWithCallbackEvent,
-        },
+        chain::reader::{self, BlockNumber, BlockStatus, EntropyReader, RequestedV2Event},
         config::EthereumConfig,
         eth_utils::{
             eth_gas_oracle::EthProviderOracle,
@@ -33,7 +32,9 @@ use {
 // contract in the same repo.
 abigen!(
     PythRandom,
-    "../../target_chains/ethereum/entropy_sdk/solidity/abis/IEntropy.json"
+    "../../target_chains/ethereum/entropy_sdk/solidity/abis/IEntropy.json";
+    PythRandomErrors,
+    "../../target_chains/ethereum/entropy_sdk/solidity/abis/EntropyErrors.json"
 );
 
 pub type MiddlewaresWrapper<T> = LegacyTxMiddleware<
@@ -166,8 +167,19 @@ impl<T: JsonRpcClient + 'static + Clone> SignablePythContractInner<T> {
         provider: Provider<T>,
         network_id: u64,
     ) -> Result<SignablePythContractInner<T>> {
-        let gas_oracle =
-            EthProviderOracle::new(provider.clone(), chain_config.priority_fee_multiplier_pct);
+        let gas_oracle = EthProviderOracle::new(
+            provider.clone(),
+            chain_config.priority_fee_multiplier_pct,
+            chain_config.min_reward_samples,
+            chain_config.fee_estimation_past_blocks,
+            chain_config.fee_estimation_reward_percentile,
+            chain_config.eip1559_fee_estimation_default_priority_fee,
+            chain_config.eip1559_fee_estimation_priority_fee_trigger,
+            chain_config.eip1559_fee_estimation_threshold_max_change,
+            chain_config.surge_threshold_1,
+            chain_config.surge_threshold_2,
+            chain_config.surge_threshold_3,
+        );
         let wallet__ = private_key
             .parse::<LocalWallet>()?
             .with_chain_id(network_id);
@@ -261,28 +273,26 @@ impl<T: JsonRpcClient + 'static> PythRandom<Provider<T>> {
 
 #[async_trait]
 impl<T: JsonRpcClient + 'static> EntropyReader for PythRandom<Provider<T>> {
-    async fn get_request(
+    async fn get_request_v2(
         &self,
         provider_address: Address,
         sequence_number: u64,
     ) -> Result<Option<reader::Request>> {
-        let r = self
-            .get_request(provider_address, sequence_number)
-            // TODO: This doesn't work for lighlink right now. Figure out how to do this in lightlink
-            // .block(ethers::core::types::BlockNumber::Finalized)
+        let request = self
+            .get_request_v2(provider_address, sequence_number)
             .call()
             .await?;
-
-        // sequence_number == 0 means the request does not exist.
-        if r.sequence_number != 0 {
-            Ok(Some(reader::Request {
-                provider: r.provider,
-                sequence_number: r.sequence_number,
-                block_number: r.block_number,
-                use_blockhash: r.use_blockhash,
-            }))
-        } else {
+        if request.sequence_number == 0 {
             Ok(None)
+        } else {
+            Ok(Some(reader::Request {
+                provider: request.provider,
+                sequence_number: request.sequence_number,
+                block_number: request.block_number,
+                use_blockhash: request.use_blockhash,
+                callback_status: reader::RequestCallbackStatus::try_from(request.callback_status)?,
+                gas_limit_10k: request.gas_limit_1_0k,
+            }))
         }
     }
 
@@ -305,8 +315,8 @@ impl<T: JsonRpcClient + 'static> EntropyReader for PythRandom<Provider<T>> {
         from_block: BlockNumber,
         to_block: BlockNumber,
         provider: Address,
-    ) -> Result<Vec<RequestedWithCallbackEvent>> {
-        let mut event = self.requested_with_callback_filter();
+    ) -> Result<Vec<RequestedV2Event>> {
+        let mut event = self.requested_2_filter();
         event.filter = event
             .filter
             .address(self.address())
@@ -314,24 +324,15 @@ impl<T: JsonRpcClient + 'static> EntropyReader for PythRandom<Provider<T>> {
             .to_block(to_block)
             .topic1(provider);
 
-        let res: Vec<(RequestedWithCallbackFilter, LogMeta)> = event.query_with_meta().await?;
+        let res: Vec<(Requested2Filter, LogMeta)> = event.query_with_meta().await?;
         Ok(res
             .into_iter()
-            .map(|(r, meta)| RequestedWithCallbackEvent {
+            .map(|(r, meta)| RequestedV2Event {
                 sequence_number: r.sequence_number,
-                user_random_number: r.user_random_number,
-                provider_address: r.request.provider,
-                requestor: r.requestor,
-                request: EntropyRequestInfo {
-                    provider: r.request.provider,
-                    sequence_number: r.request.sequence_number,
-                    num_hashes: r.request.num_hashes,
-                    commitment: r.request.commitment,
-                    block_number: r.request.block_number,
-                    requester: r.request.requester,
-                    use_blockhash: r.request.use_blockhash,
-                    is_request_with_callback: r.request.is_request_with_callback,
-                },
+                user_random_number: r.user_contribution,
+                provider_address: r.provider,
+                sender: r.caller,
+                gas_limit: r.gas_limit,
                 log_meta: meta,
             })
             .filter(|r| r.provider_address == provider)

@@ -1,3 +1,8 @@
+import type {
+  MappingRawConfig,
+  ProductRawConfig,
+} from '@pythnetwork/xc-admin-common'
+import { Connection } from '@solana/web3.js'
 import React, {
   createContext,
   useContext,
@@ -5,19 +10,15 @@ import React, {
   useMemo,
   useState,
 } from 'react'
-import { usePyth } from '../hooks/usePyth'
-import { RawConfig } from '../hooks/usePyth'
-import { Connection } from '@solana/web3.js'
-import {
-  MappingRawConfig,
-  ProductRawConfig,
-} from '@pythnetwork/xc-admin-common'
 
-type AccountKeyToSymbol = { [key: string]: string }
-interface PythContextProps {
+import type { RawConfig } from '../hooks/usePyth'
+import { usePyth } from '../hooks/usePyth'
+
+type AccountKeyToSymbol = Record<string, string>
+type PythContextProps = {
   rawConfig: RawConfig
   dataIsLoading: boolean
-  connection?: Connection
+  connection?: Connection | undefined
   priceAccountKeyToSymbolMapping: AccountKeyToSymbol
   productAccountKeyToSymbolMapping: AccountKeyToSymbol
   publisherKeyToNameMapping: Record<string, Record<string, string>>
@@ -35,7 +36,7 @@ const PythContext = createContext<PythContextProps>({
 
 export const usePythContext = () => useContext(PythContext)
 
-interface PythContextProviderProps {
+type PythContextProviderProps = {
   children?: React.ReactNode
   publisherKeyToNameMapping: Record<string, Record<string, string>>
   multisigSignerKeyToNameMapping: Record<string, string>
@@ -69,7 +70,7 @@ export const PythContextProvider: React.FC<PythContextProviderProps> = ({
     }
   }, [rawConfig, isLoading])
 
-  const value = useMemo(
+  const value = useMemo<PythContextProps>(
     () => ({
       rawConfig,
       dataIsLoading: isLoading,

@@ -20,6 +20,8 @@ import { Card } from "../Card/index.jsx";
 import { Link } from "../Link/index.jsx";
 import type { Link as UnstyledLink } from "../unstyled/Link/index.jsx";
 
+export { default as Logo } from "./logo.svg";
+
 type Props = ComponentProps<"header"> & {
   appName: string;
   mainCta?:
@@ -30,6 +32,7 @@ type Props = ComponentProps<"header"> & {
     | undefined;
   mainMenu?: ReactNode | undefined;
   extraCta?: ReactNode | undefined;
+  displaySupportButton?: boolean | undefined;
 };
 
 export const Header = ({
@@ -38,6 +41,7 @@ export const Header = ({
   mainCta,
   mainMenu,
   extraCta,
+  displaySupportButton = true,
   ...props
 }: Props) => (
   <header className={clsx(styles.header, className)} {...props}>
@@ -53,18 +57,20 @@ export const Header = ({
         {mainMenu}
       </div>
       <div className={styles.rightMenu}>
-        <Button
-          variant="ghost"
-          size="sm"
-          rounded
-          beforeIcon={<Lifebuoy />}
-          drawer={SupportDrawer}
-          className={styles.supportButton ?? ""}
-        >
-          Support
-        </Button>
+        {displaySupportButton && (
+          <Button
+            variant="ghost"
+            size="sm"
+            rounded
+            beforeIcon={<Lifebuoy />}
+            drawer={SupportDrawer}
+            className={styles.supportButton ?? ""}
+          >
+            Support
+          </Button>
+        )}
         {extraCta}
-        <MobileMenu className={styles.mobileMenu} />
+        <MobileMenu className={styles.mobileMenu} mainCta={mainCta} />
         <Button
           href={mainCta?.href ?? "https://docs.pyth.network"}
           size="sm"
@@ -80,7 +86,13 @@ export const Header = ({
   </header>
 );
 
-const MobileMenu = ({ className }: { className?: string | undefined }) => (
+const MobileMenu = ({
+  className,
+  mainCta,
+}: {
+  className?: string | undefined;
+  mainCta: Props["mainCta"];
+}) => (
   <Button
     className={className ?? ""}
     beforeIcon={<List />}
@@ -91,14 +103,14 @@ const MobileMenu = ({ className }: { className?: string | undefined }) => (
     drawer={{
       hideHeading: true,
       title: "Menu",
-      contents: <MobileMenuContents />,
+      contents: <MobileMenuContents mainCta={mainCta} />,
     }}
   >
     Menu
   </Button>
 );
 
-const MobileMenuContents = () => (
+const MobileMenuContents = ({ mainCta }: { mainCta: Props["mainCta"] }) => (
   <div className={styles.mobileMenuContents}>
     <div className={styles.buttons}>
       <Button
@@ -111,12 +123,12 @@ const MobileMenuContents = () => (
         Support
       </Button>
       <Button
-        href="https://docs.pyth.network"
+        href={mainCta?.href ?? "https://docs.pyth.network"}
         size="md"
         rounded
         target="_blank"
       >
-        Dev Docs
+        {mainCta?.label ?? "Dev Docs"}
       </Button>
     </div>
     <div className={styles.theme}>
@@ -229,3 +241,5 @@ export const SupportDrawer = {
     </>
   ),
 };
+
+export { default as HeaderLogo } from "./logo.svg";

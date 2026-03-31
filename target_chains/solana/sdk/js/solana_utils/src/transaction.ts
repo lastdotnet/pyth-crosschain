@@ -1,30 +1,39 @@
+/* eslint-disable no-console */
+/* eslint-disable unicorn/no-null */
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import type { AnchorWallet } from "@solana/wallet-adapter-react";
+import type { SignatureResult, Signer } from "@solana/web3.js";
 import {
   AddressLookupTableAccount,
   ComputeBudgetProgram,
   Connection,
   PACKET_DATA_SIZE,
   PublicKey,
-  SignatureResult,
-  Signer,
   Transaction,
   TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
 } from "@solana/web3.js";
 import bs58 from "bs58";
+
 import { buildJitoTipInstruction } from "./jito";
-import type { AnchorWallet } from "@solana/wallet-adapter-react";
 
 /**
  * If the transaction doesn't contain a `setComputeUnitLimit` instruction, the default compute budget is 200,000 units per instruction.
  */
-export const DEFAULT_COMPUTE_BUDGET_UNITS = 200000;
+export const DEFAULT_COMPUTE_BUDGET_UNITS = 200_000;
 
 /**
  * The maximum size of a Solana transaction, leaving some room for the compute budget instructions.
  */
 export const PACKET_DATA_SIZE_WITH_ROOM_FOR_COMPUTE_BUDGET =
   PACKET_DATA_SIZE - 52;
+
+/**
+ * The maximum number of transactions in a Jito bundle.
+ */
+export const JITO_BUNDLE_SIZE = 5;
 
 /**
  * An instruction with some extra information that will be used to build transactions.
@@ -35,7 +44,7 @@ export type InstructionWithEphemeralSigners = {
   /** The ephemeral signers that need to sign the transaction where this instruction will be */
   signers: Signer[];
   /** The compute units that this instruction requires, useful if greater than `DEFAULT_COMPUTE_BUDGET_UNITS`  */
-  computeUnits?: number;
+  computeUnits?: number | undefined;
 };
 
 /**
@@ -46,14 +55,13 @@ export type PriorityFeeConfig = {
   computeUnitPriceMicroLamports?: number;
   tightComputeBudget?: boolean;
   jitoTipLamports?: number;
-  jitoBundleSize?: number;
 };
 
 /**
  * A default priority fee configuration. Using a priority fee is helpful even when you're not writing to hot accounts.
  */
 export const DEFAULT_PRIORITY_FEE_CONFIG: PriorityFeeConfig = {
-  computeUnitPriceMicroLamports: 50000,
+  computeUnitPriceMicroLamports: 50_000,
 };
 
 /**
@@ -109,14 +117,12 @@ export function getSizeOfTransaction(
 
   let numberOfAddressLookups = 0;
   if (addressLookupTable) {
-    const lookupTableAddresses = addressLookupTable.state.addresses.map(
-      (address) => address.toBase58(),
+    const lookupTableAddresses = new Set(
+      addressLookupTable.state.addresses.map((address) => address.toBase58()),
     );
     const totalNumberOfAccounts = accounts.size;
     accounts = new Set(
-      [...accounts].filter(
-        (account) => !lookupTableAddresses.includes(account),
-      ),
+      [...accounts].filter((account) => !lookupTableAddresses.has(account)),
     );
     accounts = new Set([...accounts, ...programs, ...signers]);
     numberOfAddressLookups = totalNumberOfAccounts - accounts.size; // This number is equal to the number of accounts that are in the lookup table and are neither signers nor programs
@@ -142,7 +148,7 @@ export function getSizeOfTransaction(
  * Get the size of n in bytes when serialized as a CompressedU16. Compact arrays use a CompactU16 to store the length of the array.
  */
 export function getSizeOfCompressedU16(n: number) {
-  return 1 + Number(n >= 128) + Number(n >= 16384);
+  return 1 + Number(n >= 128) + Number(n >= 16_384);
 }
 
 /**
@@ -184,26 +190,22 @@ export class TransactionBuilder {
     } else {
       const sizeWithComputeUnits = getSizeOfTransaction(
         [
-          ...this.transactionInstructions[
-            this.transactionInstructions.length - 1
-          ].instructions,
+          ...(this.transactionInstructions.at(-1)?.instructions ?? []),
           instruction,
-          buildJitoTipInstruction(this.payer, 1),
+          this.transactionInstructions.length % JITO_BUNDLE_SIZE === 0 // This transaction may be the first of a Jito bundle, so we leave room for a Jito tip transfer.
+            ? buildJitoTipInstruction(this.payer, 1)
+            : ComputeBudgetProgram.setComputeUnitPrice({
+                microLamports: 1,
+              }),
           ComputeBudgetProgram.setComputeUnitLimit({ units: 1 }),
         ],
         true,
         this.addressLookupTable,
       );
       if (sizeWithComputeUnits <= PACKET_DATA_SIZE) {
-        this.transactionInstructions[
-          this.transactionInstructions.length - 1
-        ].instructions.push(instruction);
-        this.transactionInstructions[
-          this.transactionInstructions.length - 1
-        ].signers.push(...signers);
-        this.transactionInstructions[
-          this.transactionInstructions.length - 1
-        ].computeUnits += computeUnits ?? 0;
+        this.transactionInstructions.at(-1)?.instructions.push(instruction);
+        this.transactionInstructions.at(-1)?.signers.push(...signers);
+        this.transactionInstructions.at(-1)!.computeUnits += computeUnits ?? 0;
       } else
         this.transactionInstructions.push({
           instructions: [instruction],
@@ -228,13 +230,9 @@ export class TransactionBuilder {
   async buildVersionedTransactions(
     args: PriorityFeeConfig,
   ): Promise<{ tx: VersionedTransaction; signers: Signer[] }[]> {
-    const blockhash = (
-      await this.connection.getLatestBlockhash({ commitment: "confirmed" })
-    ).blockhash;
-
-    const jitoBundleSize =
-      args.jitoBundleSize || this.transactionInstructions.length;
-
+    const { blockhash } = await this.connection.getLatestBlockhash({
+      commitment: "confirmed",
+    });
     return this.transactionInstructions.map(
       ({ instructions, signers, computeUnits }, index) => {
         const instructionsWithComputeBudget: TransactionInstruction[] = [
@@ -255,7 +253,7 @@ export class TransactionBuilder {
             }),
           );
         }
-        if (args.jitoTipLamports && index % jitoBundleSize === 0) {
+        if (args.jitoTipLamports && index % JITO_BUNDLE_SIZE === 0) {
           instructionsWithComputeBudget.push(
             buildJitoTipInstruction(this.payer, args.jitoTipLamports),
           );
@@ -297,9 +295,6 @@ export class TransactionBuilder {
   buildLegacyTransactions(
     args: PriorityFeeConfig,
   ): { tx: Transaction; signers: Signer[] }[] {
-    const jitoBundleSize =
-      args.jitoBundleSize || this.transactionInstructions.length;
-
     return this.transactionInstructions.map(
       ({ instructions, signers, computeUnits }, index) => {
         const instructionsWithComputeBudget: TransactionInstruction[] = [
@@ -320,7 +315,7 @@ export class TransactionBuilder {
             }),
           );
         }
-        if (args.jitoTipLamports && index % jitoBundleSize === 0) {
+        if (args.jitoTipLamports && index % JITO_BUNDLE_SIZE === 0) {
           instructionsWithComputeBudget.push(
             buildJitoTipInstruction(this.payer, args.jitoTipLamports),
           );
@@ -334,9 +329,9 @@ export class TransactionBuilder {
             false,
           );
           if (sizeWithInstruction > PACKET_DATA_SIZE) {
-            if (instructionsToSend.length == 0) {
+            if (instructionsToSend.length === 0) {
               throw new Error(
-                `An instruction is too big to be sent in a transaction (${sizeWithInstruction} > ${PACKET_DATA_SIZE} bytes)`,
+                `An instruction is too big to be sent in a transaction (${sizeWithInstruction.toString()} > ${PACKET_DATA_SIZE.toString()} bytes)`,
               );
             }
             break;
@@ -460,13 +455,13 @@ export async function sendTransactions(
     // In the following section, we wait and constantly check for the transaction to be confirmed
     // and resend the transaction if it is not confirmed within a certain time interval
     // thus handling tx retries on the client side rather than relying on the RPC
-    let confirmedTx: SignatureResult | null = null;
+    let confirmedTx: SignatureResult | null | undefined;
     let retryCount = 0;
 
     // Get the signature of the transaction with different logic for versioned transactions
     const txSignature = bs58.encode(
       isVersionedTransaction(tx)
-        ? tx.signatures?.[0] || new Uint8Array()
+        ? tx.signatures[0] || new Uint8Array()
         : (tx.signature ?? new Uint8Array()),
     );
 
@@ -479,11 +474,12 @@ export async function sendTransactions(
       "confirmed",
     );
 
-    confirmedTx = null;
+    confirmedTx = undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (!confirmedTx) {
       confirmedTx = await Promise.race([
         new Promise<SignatureResult>((resolve) => {
-          confirmTransactionPromise.then((result) => {
+          void confirmTransactionPromise.then((result) => {
             resolve(result.value);
           });
         }),
@@ -500,13 +496,13 @@ export async function sendTransactions(
         break;
       }
       console.log(
-        "Retrying transaction ",
+        "Retrying transaction",
         index,
-        " of ",
+        "of",
         transactions.length - 1,
-        " with signature: ",
+        "with signature:",
         txSignature,
-        " Retry count: ",
+        "Retry count:",
         retryCount,
       );
       retryCount++;

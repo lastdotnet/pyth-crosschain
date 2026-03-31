@@ -1,14 +1,11 @@
 use {
     super::doc_examples,
-    crate::state::aggregate::{
-        PriceFeedTwap, PriceFeedUpdate, PriceFeedsWithUpdateData, Slot, UnixTimestamp,
-    },
+    crate::state::aggregate::{PriceFeedUpdate, PriceFeedsWithUpdateData, Slot, UnixTimestamp},
     anyhow::Result,
     base64::{engine::general_purpose::STANDARD as base64_standard_engine, Engine as _},
     borsh::{BorshDeserialize, BorshSerialize},
     derive_more::{Deref, DerefMut},
     pyth_sdk::{Price, PriceFeed, PriceIdentifier},
-    rust_decimal::Decimal,
     serde::{Deserialize, Serialize},
     std::{
         collections::BTreeMap,
@@ -247,48 +244,6 @@ impl From<PriceFeedUpdate> for ParsedPriceUpdate {
         }
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct ParsedPriceFeedTwap {
-    pub id: RpcPriceIdentifier,
-    /// The start unix timestamp of the window
-    pub start_timestamp: i64,
-    /// The end unix timestamp of the window
-    pub end_timestamp: i64,
-    /// The calculated time weighted average price over the window
-    pub twap: RpcPrice,
-    /// The % of slots where the network was down over the TWAP window.
-    /// A value of zero indicates no slots were missed over the window, and
-    /// a value of one indicates that every slot was missed over the window.
-    /// This is a float value stored as a string to avoid precision loss.
-    pub down_slots_ratio: Decimal,
-}
-impl From<PriceFeedTwap> for ParsedPriceFeedTwap {
-    fn from(pft: PriceFeedTwap) -> Self {
-        Self {
-            id: RpcPriceIdentifier::from(pft.id),
-            start_timestamp: pft.start_timestamp,
-            end_timestamp: pft.end_timestamp,
-            twap: RpcPrice {
-                price: pft.twap.price,
-                conf: pft.twap.conf,
-                expo: pft.twap.expo,
-                publish_time: pft.twap.publish_time,
-            },
-            down_slots_ratio: pft.down_slots_ratio,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct TwapsResponse {
-    /// Contains the start & end cumulative price updates used to
-    /// calculate a given price feed's TWAP.
-    pub binary: BinaryUpdate,
-
-    /// The calculated TWAPs for each price ID
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub parsed: Option<Vec<ParsedPriceFeedTwap>>,
-}
 
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize, Clone, ToSchema)]
 pub struct ParsedPublisherStakeCapsUpdate {
@@ -374,23 +329,32 @@ pub struct PriceFeedMetadata {
 #[serde(rename_all = "snake_case")]
 pub enum AssetType {
     Crypto,
-    #[serde(rename = "fx")]
-    FX,
+    Fx,
     Equity,
     Metal,
     Rates,
     CryptoRedemptionRate,
+    Commodities,
+    CryptoIndex,
+    CryptoNav,
+    Eco,
+    Kalshi,
 }
 
 impl Display for AssetType {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match self {
             AssetType::Crypto => write!(f, "crypto"),
-            AssetType::FX => write!(f, "fx"),
+            AssetType::Fx => write!(f, "fx"),
             AssetType::Equity => write!(f, "equity"),
             AssetType::Metal => write!(f, "metal"),
             AssetType::Rates => write!(f, "rates"),
             AssetType::CryptoRedemptionRate => write!(f, "crypto_redemption_rate"),
+            AssetType::Commodities => write!(f, "commodities"),
+            AssetType::CryptoIndex => write!(f, "crypto_index"),
+            AssetType::CryptoNav => write!(f, "crypto_nav"),
+            AssetType::Eco => write!(f, "eco"),
+            AssetType::Kalshi => write!(f, "kalshi"),
         }
     }
 }
@@ -409,8 +373,8 @@ mod tests {
                 .trim_matches('"')
         );
         assert_eq!(
-            AssetType::FX.to_string(),
-            serde_json::to_string(&AssetType::FX)
+            AssetType::Fx.to_string(),
+            serde_json::to_string(&AssetType::Fx)
                 .unwrap()
                 .trim_matches('"')
         );
@@ -435,6 +399,36 @@ mod tests {
         assert_eq!(
             AssetType::CryptoRedemptionRate.to_string(),
             serde_json::to_string(&AssetType::CryptoRedemptionRate)
+                .unwrap()
+                .trim_matches('"')
+        );
+        assert_eq!(
+            AssetType::Commodities.to_string(),
+            serde_json::to_string(&AssetType::Commodities)
+                .unwrap()
+                .trim_matches('"')
+        );
+        assert_eq!(
+            AssetType::CryptoIndex.to_string(),
+            serde_json::to_string(&AssetType::CryptoIndex)
+                .unwrap()
+                .trim_matches('"')
+        );
+        assert_eq!(
+            AssetType::CryptoNav.to_string(),
+            serde_json::to_string(&AssetType::CryptoNav)
+                .unwrap()
+                .trim_matches('"')
+        );
+        assert_eq!(
+            AssetType::Eco.to_string(),
+            serde_json::to_string(&AssetType::Eco)
+                .unwrap()
+                .trim_matches('"')
+        );
+        assert_eq!(
+            AssetType::Kalshi.to_string(),
+            serde_json::to_string(&AssetType::Kalshi)
                 .unwrap()
                 .trim_matches('"')
         );

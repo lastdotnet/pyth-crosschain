@@ -5,12 +5,23 @@
     "build": {
       "dependsOn": [
         "//#install:modules",
+        "clean",
         "^build",
         "build:declarations",
-        "build:esm",
+        "build:css-in-js",
         "build:scss",
         "build:svg"
       ]
+    },
+    "build:css-in-js": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.styles.ts"],
+      "outputs": ["src/v2/v2-theme.css"]
+    },
+    "build:css-in-js:watch": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
     },
     "build:declarations": {
       "dependsOn": ["//#install:modules", "^build"],
@@ -23,12 +34,17 @@
       "outputs": ["dist/**/*.scss"]
     },
     "build:storybook": {
+      "dependsOn": ["^build", "build:css-in-js"],
       "outputs": ["storybook-static/**"]
     },
     "build:svg": {
       "dependsOn": ["//#install:modules"],
       "inputs": ["src/**/*.svg"],
       "outputs": ["dist/**/*.svg"]
+    },
+    "clean": {
+      "cache": false,
+      "outputs": []
     },
     "fix:lint": {
       "dependsOn": [
@@ -44,6 +60,15 @@
     "fix:lint:stylelint": {
       "dependsOn": ["//#install:modules"],
       "cache": false
+    },
+    "start:dev": {
+      "dependsOn": ["build"],
+      "with": ["build:css-in-js:watch"]
+    },
+    "storybook": {
+      "cache": false,
+      "dependsOn": ["build:css-in-js"],
+      "with": ["build:css-in-js:watch"]
     },
     "test:lint": {
       "dependsOn": ["test:lint:eslint", "test:lint:stylelint"]

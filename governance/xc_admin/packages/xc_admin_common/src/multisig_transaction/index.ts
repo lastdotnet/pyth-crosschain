@@ -1,34 +1,29 @@
-import {
-  getPythProgramKeyForCluster,
-  PythCluster,
-} from "@pythnetwork/client/lib/cluster";
-import {
-  PublicKey,
-  StakeProgram,
-  SystemProgram,
-  TransactionInstruction,
-} from "@solana/web3.js";
-import { MESSAGE_BUFFER_PROGRAM_ID } from "../message_buffer";
-import { WORMHOLE_ADDRESS } from "../wormhole";
-import {
-  MESH_PROGRAM_ID,
-  AnchorMultisigInstruction,
-  STAKING_PROGRAM_ID,
-} from "./MessageBufferMultisigInstruction";
-import { PythMultisigInstruction } from "./PythMultisigInstruction";
-import { WormholeMultisigInstruction } from "./WormholeMultisigInstruction";
-import { SystemProgramMultisigInstruction } from "./SystemProgramInstruction";
-import { BpfUpgradableLoaderInstruction } from "./BpfUpgradableLoaderMultisigInstruction";
-import { BPF_UPGRADABLE_LOADER } from "../bpf_upgradable_loader";
-import { AnchorAccounts } from "./anchor";
-import { SolanaStakingMultisigInstruction } from "./SolanaStakingMultisigInstruction";
+import type { PythCluster } from "@pythnetwork/client/lib/cluster";
+import { getPythProgramKeyForCluster } from "@pythnetwork/client/lib/cluster";
+import { SOLANA_LAZER_PROGRAM_ID } from "@pythnetwork/pyth-lazer-sdk";
 import { DEFAULT_RECEIVER_PROGRAM_ID } from "@pythnetwork/pyth-solana-receiver";
+import type { TransactionInstruction } from "@solana/web3.js";
+import { PublicKey, StakeProgram, SystemProgram } from "@solana/web3.js";
+import { BPF_UPGRADABLE_LOADER } from "../bpf_upgradable_loader";
+import { MESSAGE_BUFFER_PROGRAM_ID } from "../message_buffer";
 import {
   PRICE_STORE_PROGRAM_ID,
   PriceStoreMultisigInstruction,
 } from "../price_store";
+import { WORMHOLE_ADDRESS } from "../wormhole";
+import {
+  AnchorMultisigInstruction,
+  INTEGRITY_POOL_PROGRAM_ID,
+  MESH_PROGRAM_ID,
+  STAKING_PROGRAM_ID,
+} from "./AnchorMultisigInstruction";
+import type { AnchorAccounts } from "./anchor";
+import { BpfUpgradableLoaderInstruction } from "./BpfUpgradableLoaderMultisigInstruction";
 import { LazerMultisigInstruction } from "./LazerMultisigInstruction";
-import { SOLANA_LAZER_PROGRAM_ID } from "@pythnetwork/pyth-lazer-sdk";
+import { PythMultisigInstruction } from "./PythMultisigInstruction";
+import { SolanaStakingMultisigInstruction } from "./SolanaStakingMultisigInstruction";
+import { SystemProgramMultisigInstruction } from "./SystemProgramInstruction";
+import { WormholeMultisigInstruction } from "./WormholeMultisigInstruction";
 
 export const UNRECOGNIZED_INSTRUCTION = "unrecognizedInstruction";
 export enum MultisigInstructionProgram {
@@ -36,6 +31,7 @@ export enum MultisigInstructionProgram {
   WormholeBridge,
   MessageBuffer,
   Staking,
+  IntegrityPool,
   Mesh,
   SystemProgram,
   BpfUpgradableLoader,
@@ -64,6 +60,8 @@ export function getProgramName(program: MultisigInstructionProgram) {
       return "Mesh Multisig Program";
     case MultisigInstructionProgram.Staking:
       return "Pyth Staking Program";
+    case MultisigInstructionProgram.IntegrityPool:
+      return "Integrity Pool";
     case MultisigInstructionProgram.SolanaReceiver:
       return "Pyth Solana Receiver";
     case MultisigInstructionProgram.PythPriceStore:
@@ -75,21 +73,24 @@ export function getProgramName(program: MultisigInstructionProgram) {
   }
 }
 
-export interface MultisigInstruction {
+export type MultisigInstruction = {
   readonly program: MultisigInstructionProgram;
   readonly name: string;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy typing
   readonly args: { [key: string]: any };
   readonly accounts: AnchorAccounts;
-}
+};
 
 export class UnrecognizedProgram implements MultisigInstruction {
   readonly program = MultisigInstructionProgram.UnrecognizedProgram;
   readonly name: string;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy typing
   readonly args: { [key: string]: any };
   readonly accounts: AnchorAccounts;
 
   constructor(
     name: string,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy typing
     args: { [key: string]: any },
     accounts: AnchorAccounts,
   ) {
@@ -151,7 +152,8 @@ export class MultisigParser {
       instruction.programId.equals(MESSAGE_BUFFER_PROGRAM_ID) ||
       instruction.programId.equals(MESH_PROGRAM_ID) ||
       instruction.programId.equals(STAKING_PROGRAM_ID) ||
-      instruction.programId.equals(DEFAULT_RECEIVER_PROGRAM_ID)
+      instruction.programId.equals(DEFAULT_RECEIVER_PROGRAM_ID) ||
+      instruction.programId.equals(INTEGRITY_POOL_PROGRAM_ID)
     ) {
       return AnchorMultisigInstruction.fromTransactionInstruction(instruction);
     } else if (instruction.programId.equals(SystemProgram.programId)) {
@@ -166,7 +168,9 @@ export class MultisigParser {
       return SolanaStakingMultisigInstruction.fromTransactionInstruction(
         instruction,
       );
-    } else if (instruction.programId.equals(SOLANA_LAZER_PROGRAM_ID)) {
+    } else if (
+      instruction.programId.equals(new PublicKey(SOLANA_LAZER_PROGRAM_ID))
+    ) {
       return LazerMultisigInstruction.fromInstruction(instruction);
     } else {
       return UnrecognizedProgram.fromTransactionInstruction(instruction);
@@ -174,13 +178,13 @@ export class MultisigParser {
   }
 }
 
+export { AnchorMultisigInstruction } from "./AnchorMultisigInstruction";
 export { idlSetBuffer } from "./anchor";
-export { WormholeMultisigInstruction } from "./WormholeMultisigInstruction";
-export { PythMultisigInstruction } from "./PythMultisigInstruction";
-export { AnchorMultisigInstruction } from "./MessageBufferMultisigInstruction";
-export { SystemProgramMultisigInstruction } from "./SystemProgramInstruction";
 export { BpfUpgradableLoaderInstruction } from "./BpfUpgradableLoaderMultisigInstruction";
+export { PythMultisigInstruction } from "./PythMultisigInstruction";
 export {
-  SolanaStakingMultisigInstruction,
   fetchStakeAccounts,
+  SolanaStakingMultisigInstruction,
 } from "./SolanaStakingMultisigInstruction";
+export { SystemProgramMultisigInstruction } from "./SystemProgramInstruction";
+export { WormholeMultisigInstruction } from "./WormholeMultisigInstruction";

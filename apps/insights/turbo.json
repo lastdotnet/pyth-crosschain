@@ -4,14 +4,26 @@
   "tasks": {
     "build:vercel": {
       "env": [
+        "VERCEL_AUTOMATION_BYPASS_SECRET",
         "VERCEL_ENV",
+        "VERCEL_URL",
         "GOOGLE_ANALYTICS_ID",
         "AMPLITUDE_API_KEY",
         "CLICKHOUSE_URL",
         "CLICKHOUSE_USERNAME",
+        "CLICKHOUSE_PYTH_PRO_URL",
+        "CLICKHOUSE_PYTH_ANALYTICS_URL",
+        "CLICKHOUSE_PYTH_PRO_USERNAME",
+        "CLICKHOUSE_PYTH_ANALYTICS_USERNAME",
         "CLICKHOUSE_PASSWORD",
+        "CLICKHOUSE_PYTH_PRO_PASSWORD",
+        "CLICKHOUSE_PYTH_ANALYTICS_PASSWORD",
         "SOLANA_RPC",
-        "DISABLE_ACCESSIBILITY_REPORTING"
+        "DISABLE_ACCESSIBILITY_REPORTING",
+        "NEXT_PUBLIC_PYTHNET_RPC",
+        "NEXT_PUBLIC_PYTHTEST_CONFORMANCE_RPC",
+        "REDIS_URL",
+        "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
     "fix:lint": {
@@ -28,6 +40,9 @@
     "fix:lint:stylelint": {
       "dependsOn": ["//#install:modules"],
       "cache": false
+    },
+    "start:dev": {
+      "with": ["@pythnetwork/component-library#start:dev"]
     },
     "start:prod": {
       "dependsOn": ["//#install:modules", "build:vercel"]

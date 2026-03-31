@@ -1,18 +1,27 @@
-import { SuiClient } from "@mysten/sui/client";
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
-import { Transaction } from "@mysten/sui/transactions";
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-console */
+import { Buffer } from "node:buffer";
+
 import { bcs } from "@mysten/sui/bcs";
-import { HexString } from "@pythnetwork/price-service-client";
-import { Buffer } from "buffer";
+import { SuiClient } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
+import type { HexString } from "@pythnetwork/hermes-client";
 
 const MAX_ARGUMENT_SIZE = 16 * 1024;
+type NestedTransactionResult = {
+  $kind: "NestedResult";
+  NestedResult: [number, number];
+};
 export type ObjectId = string;
 
 export class SuiPythClient {
   private pythPackageId: ObjectId | undefined;
   private wormholePackageId: ObjectId | undefined;
   private priceTableInfo: { id: ObjectId; fieldType: ObjectId } | undefined;
-  private priceFeedObjectIdCache: Map<HexString, ObjectId> = new Map();
+  private priceFeedObjectIdCache = new Map<HexString, ObjectId>();
   private baseUpdateFee: number | undefined;
   constructor(
     public provider: SuiClient,
@@ -30,8 +39,7 @@ export class SuiPythClient {
         options: { showContent: true },
       });
       if (
-        !result.data ||
-        !result.data.content ||
+        !result.data?.content ||
         result.data.content.dataType !== "moveObject"
       )
         throw new Error("Unable to fetch pyth state object");
@@ -46,7 +54,7 @@ export class SuiPythClient {
   /**
    * getPackageId returns the latest package id that the object belongs to. Use this to
    * fetch the latest package id for a given object id and handle package upgrades automatically.
-   * @param objectId
+   * @param objectId - the object id
    * @returns package id
    */
   async getPackageId(objectId: ObjectId): Promise<ObjectId> {
@@ -69,6 +77,7 @@ export class SuiPythClient {
     if ("upgrade_cap" in state) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
       return state.upgrade_cap.fields.package;
     }
 
@@ -77,8 +86,8 @@ export class SuiPythClient {
 
   /**
    * Adds the commands for calling wormhole and verifying the vaas and returns the verified vaas.
-   * @param vaas array of vaas to verify
-   * @param tx transaction block to add commands to
+   * @param vaas - array of vaas to verify
+   * @param tx - transaction block to add commands to
    */
   async verifyVaas(vaas: Buffer[], tx: Transaction) {
     const wormholePackageId = await this.getWormholePackageId();
@@ -91,7 +100,7 @@ export class SuiPythClient {
           tx.pure(
             bcs
               .vector(bcs.U8)
-              .serialize(Array.from(vaa), {
+              .serialize([...vaa], {
                 maxSize: MAX_ARGUMENT_SIZE,
               })
               .toBytes(),
@@ -104,50 +113,46 @@ export class SuiPythClient {
     return verifiedVaas;
   }
 
-  /**
-   * Adds the necessary commands for updating the pyth price feeds to the transaction block.
-   * @param tx transaction block to add commands to
-   * @param updates array of price feed updates received from the price service
-   * @param feedIds array of feed ids to update (in hex format)
-   */
-  async updatePriceFeeds(
+  async verifyVaasAndGetHotPotato(
     tx: Transaction,
     updates: Buffer[],
-    feedIds: HexString[],
-  ): Promise<ObjectId[]> {
-    const packageId = await this.getPythPackageId();
-
-    let priceUpdatesHotPotato;
+    packageId: string,
+  ): Promise<NestedTransactionResult> {
     if (updates.length > 1) {
       throw new Error(
         "SDK does not support sending multiple accumulator messages in a single transaction",
       );
     }
-    const vaa = this.extractVaaBytesFromAccumulatorMessage(updates[0]);
+    const vaa = this.extractVaaBytesFromAccumulatorMessage(updates[0]!);
     const verifiedVaas = await this.verifyVaas([vaa], tx);
-    [priceUpdatesHotPotato] = tx.moveCall({
+    const [priceUpdatesHotPotato] = tx.moveCall({
       target: `${packageId}::pyth::create_authenticated_price_infos_using_accumulator`,
       arguments: [
         tx.object(this.pythStateId),
         tx.pure(
           bcs
             .vector(bcs.U8)
-            .serialize(Array.from(updates[0]), {
+            .serialize([...updates[0]!], {
               maxSize: MAX_ARGUMENT_SIZE,
             })
             .toBytes(),
         ),
-        verifiedVaas[0],
+        verifiedVaas[0]!,
         tx.object(SUI_CLOCK_OBJECT_ID),
       ],
     });
+    return priceUpdatesHotPotato!;
+  }
 
+  async executePriceFeedUpdates(
+    tx: Transaction,
+    packageId: string,
+    feedIds: HexString[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    priceUpdatesHotPotato: any,
+    coins: NestedTransactionResult[],
+  ) {
     const priceInfoObjects: ObjectId[] = [];
-    const baseUpdateFee = await this.getBaseUpdateFee();
-    const coins = tx.splitCoins(
-      tx.gas,
-      feedIds.map(() => tx.pure.u64(baseUpdateFee)),
-    );
     let coinId = 0;
     for (const feedId of feedIds) {
       const priceInfoObjectId = await this.getPriceFeedObjectId(feedId);
@@ -176,6 +181,69 @@ export class SuiPythClient {
     });
     return priceInfoObjects;
   }
+
+  /**
+   * Adds the necessary commands for updating the pyth price feeds to the transaction block.
+   * @param tx - transaction block to add commands to
+   * @param updates - array of price feed updates received from the price service
+   * @param feedIds - array of feed ids to update (in hex format)
+   */
+  async updatePriceFeeds(
+    tx: Transaction,
+    updates: Buffer[],
+    feedIds: HexString[],
+  ): Promise<ObjectId[]> {
+    const packageId = await this.getPythPackageId();
+    const priceUpdatesHotPotato = await this.verifyVaasAndGetHotPotato(
+      tx,
+      updates,
+      packageId,
+    );
+
+    const baseUpdateFee = await this.getBaseUpdateFee();
+    const coins = tx.splitCoins(
+      tx.gas,
+      feedIds.map(() => tx.pure.u64(baseUpdateFee)),
+    );
+
+    return await this.executePriceFeedUpdates(
+      tx,
+      packageId,
+      feedIds,
+      priceUpdatesHotPotato,
+      coins,
+    );
+  }
+
+  /**
+   * Updates price feeds using the coin input for payment. Coins can be generated by calling splitCoin on tx.gas.
+   * @param tx - transaction block to add commands to
+   * @param updates - array of price feed updates received from the price service
+   * @param feedIds - array of feed ids to update (in hex format)
+   * @param coins - array of Coins for payment of update operations
+   */
+  async updatePriceFeedsWithCoins(
+    tx: Transaction,
+    updates: Buffer[],
+    feedIds: HexString[],
+    coins: NestedTransactionResult[],
+  ): Promise<ObjectId[]> {
+    const packageId = await this.getPythPackageId();
+    const priceUpdatesHotPotato = await this.verifyVaasAndGetHotPotato(
+      tx,
+      updates,
+      packageId,
+    );
+
+    return await this.executePriceFeedUpdates(
+      tx,
+      packageId,
+      feedIds,
+      priceUpdatesHotPotato,
+      coins,
+    );
+  }
+
   async createPriceFeed(tx: Transaction, updates: Buffer[]) {
     const packageId = await this.getPythPackageId();
     if (updates.length > 1) {
@@ -183,7 +251,7 @@ export class SuiPythClient {
         "SDK does not support sending multiple accumulator messages in a single transaction",
       );
     }
-    const vaa = this.extractVaaBytesFromAccumulatorMessage(updates[0]);
+    const vaa = this.extractVaaBytesFromAccumulatorMessage(updates[0]!);
     const verifiedVaas = await this.verifyVaas([vaa], tx);
     tx.moveCall({
       target: `${packageId}::pyth::create_price_feeds_using_accumulator`,
@@ -192,12 +260,12 @@ export class SuiPythClient {
         tx.pure(
           bcs
             .vector(bcs.U8)
-            .serialize(Array.from(updates[0]), {
+            .serialize([...updates[0]!], {
               maxSize: MAX_ARGUMENT_SIZE,
             })
             .toBytes(),
         ),
-        verifiedVaas[0],
+        verifiedVaas[0]!,
         tx.object(SUI_CLOCK_OBJECT_ID),
       ],
     });
@@ -225,7 +293,7 @@ export class SuiPythClient {
 
   /**
    * Get the priceFeedObjectId for a given feedId if not already cached
-   * @param feedId
+   * @param feedId - the feed id
    */
   async getPriceFeedObjectId(feedId: HexString): Promise<ObjectId | undefined> {
     const normalizedFeedId = feedId.replace("0x", "");
@@ -236,11 +304,11 @@ export class SuiPythClient {
         name: {
           type: `${fieldType}::price_identifier::PriceIdentifier`,
           value: {
-            bytes: Array.from(Buffer.from(normalizedFeedId, "hex")),
+            bytes: [...Buffer.from(normalizedFeedId, "hex")],
           },
         },
       });
-      if (!result.data || !result.data.content) {
+      if (!result.data?.content) {
         return undefined;
       }
       if (result.data.content.dataType !== "moveObject") {
@@ -250,6 +318,7 @@ export class SuiPythClient {
         normalizedFeedId,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         result.data.content.fields.value,
       );
     }
@@ -269,7 +338,7 @@ export class SuiPythClient {
           value: "price_info",
         },
       });
-      if (!result.data || !result.data.type) {
+      if (!result.data?.type) {
         throw new Error(
           "Price Table not found, contract may not be initialized",
         );

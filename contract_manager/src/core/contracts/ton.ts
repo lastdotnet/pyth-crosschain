@@ -1,13 +1,18 @@
-import { Chain, TonChain } from "../chains";
-import { WormholeContract } from "./wormhole";
-import { PriceFeed, PriceFeedContract, PrivateKey, TxResult } from "../base";
-import { TokenQty } from "../token";
-import { DataSource } from "@pythnetwork/xc-admin-common";
-import { Address, Cell, OpenedContract } from "@ton/ton";
+/** biome-ignore-all lint/suspicious/noConsole: utils used through CLI */
 import {
   calculateUpdatePriceFeedsFee,
   PythContract,
 } from "@pythnetwork/pyth-ton-js";
+import type { DataSource } from "@pythnetwork/xc-admin-common";
+import type { Cell, OpenedContract } from "@ton/ton";
+import { Address } from "@ton/ton";
+
+import type { PriceFeed, PrivateKey, TxResult } from "../base";
+import { PriceFeedContract } from "../base";
+import type { Chain } from "../chains";
+import { TonChain } from "../chains";
+import type { TokenQty } from "../token";
+import { WormholeContract } from "./wormhole";
 
 export class TonWormholeContract extends WormholeContract {
   static type = "TonWormholeContract";
@@ -26,8 +31,8 @@ export class TonWormholeContract extends WormholeContract {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: TonWormholeContract.type,
     };
   }
@@ -42,7 +47,7 @@ export class TonWormholeContract extends WormholeContract {
     if (parsed.type !== TonWormholeContract.type)
       throw new Error("Invalid type");
     if (!(chain instanceof TonChain))
-      throw new Error(`Wrong chain type ${chain}`);
+      throw new Error(`Wrong chain type ${JSON.stringify(chain)}`);
     return new TonWormholeContract(chain, parsed.address);
   }
 
@@ -53,8 +58,8 @@ export class TonWormholeContract extends WormholeContract {
     super();
   }
 
-  async getContract(): Promise<OpenedContract<PythContract>> {
-    const provider = await this.chain.getContractProvider(this.address);
+  getContract(): OpenedContract<PythContract> {
+    const provider = this.chain.getContractProvider(this.address);
     const contract = provider.open(
       PythContract.createFromAddress(Address.parse(this.address)),
     );
@@ -63,19 +68,19 @@ export class TonWormholeContract extends WormholeContract {
   }
 
   async getCurrentGuardianSetIndex(): Promise<number> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const result = await contract.getCurrentGuardianSetIndex();
     return result;
   }
 
   async getChainId(): Promise<number> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const result = await contract.getChainId();
     return Number(result);
   }
 
   async getGuardianSet(): Promise<string[]> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const guardianSetIndex = await this.getCurrentGuardianSetIndex();
     const result = await contract.getGuardianSet(guardianSetIndex);
     return result.keys;
@@ -85,10 +90,10 @@ export class TonWormholeContract extends WormholeContract {
     senderPrivateKey: PrivateKey,
     vaa: Buffer,
   ): Promise<TxResult> {
-    const contract = await this.getContract();
-    const provider = await this.chain.getContractProvider(this.address);
-    const sender = await this.chain.getSender(senderPrivateKey);
-    const wallet = await this.chain.getWallet(senderPrivateKey);
+    const contract = this.getContract();
+    const provider = this.chain.getContractProvider(this.address);
+    const sender = this.chain.getSender(senderPrivateKey);
+    const wallet = this.chain.getWallet(senderPrivateKey);
     await contract.sendUpdateGuardianSet(sender, vaa);
 
     // Get recent transactions for this address
@@ -100,7 +105,7 @@ export class TonWormholeContract extends WormholeContract {
     );
 
     return {
-      id: transactions[0].hash.toString(),
+      id: transactions[0]?.hash.toString() ?? "",
       info: JSON.stringify("0x1"),
     };
   }
@@ -123,7 +128,7 @@ export class TonPriceFeedContract extends PriceFeedContract {
     if (parsed.type !== TonPriceFeedContract.type)
       throw new Error("Invalid type");
     if (!(chain instanceof TonChain))
-      throw new Error(`Wrong chain type ${chain}`);
+      throw new Error(`Wrong chain type ${JSON.stringify(chain)}`);
     return new TonPriceFeedContract(chain, parsed.address);
   }
 
@@ -139,8 +144,8 @@ export class TonPriceFeedContract extends PriceFeedContract {
     return TonPriceFeedContract.type;
   }
 
-  async getContract(): Promise<OpenedContract<PythContract>> {
-    const provider = await this.chain.getContractProvider(this.address);
+  getContract(): OpenedContract<PythContract> {
+    const provider = this.chain.getContractProvider(this.address);
     const contract = provider.open(
       PythContract.createFromAddress(Address.parse(this.address)),
     );
@@ -149,7 +154,7 @@ export class TonPriceFeedContract extends PriceFeedContract {
   }
 
   async getTotalFee(): Promise<TokenQty> {
-    const client = await this.chain.getClient();
+    const client = this.chain.getClient();
     const balance = await client.getBalance(Address.parse(this.address));
     return {
       amount: balance,
@@ -158,49 +163,49 @@ export class TonPriceFeedContract extends PriceFeedContract {
   }
 
   async getLastExecutedGovernanceSequence(): Promise<number> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const result = await contract.getLastExecutedGovernanceSequence();
     return Number(result);
   }
 
   async getPriceFeed(feedId: string): Promise<PriceFeed | undefined> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const feedIdWithPrefix = `0x${feedId}`;
     try {
       const price = await contract.getPriceUnsafe(feedIdWithPrefix);
       const emaPrice = await contract.getEmaPriceUnsafe(feedIdWithPrefix);
       return {
-        price: {
-          price: price.price.toString(),
-          conf: price.conf.toString(),
-          expo: price.expo.toString(),
-          publishTime: price.publishTime.toString(),
-        },
         emaPrice: {
-          price: emaPrice.price.toString(),
           conf: emaPrice.conf.toString(),
           expo: emaPrice.expo.toString(),
+          price: emaPrice.price.toString(),
           publishTime: emaPrice.publishTime.toString(),
         },
+        price: {
+          conf: price.conf.toString(),
+          expo: price.expo.toString(),
+          price: price.price.toString(),
+          publishTime: price.publishTime.toString(),
+        },
       };
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       return undefined;
     }
   }
 
-  async getValidTimePeriod(): Promise<number> {
+  getValidTimePeriod(): Promise<number> {
     // Not supported but return 1 because it's required by the abstract class
-    return 1;
+    return Promise.resolve(1);
   }
 
-  async getWormholeContract(): Promise<TonWormholeContract> {
+  getWormholeContract(): TonWormholeContract {
     // Price feed contract and wormhole contract live at same address in TON
     return new TonWormholeContract(this.chain, this.address);
   }
 
   async getBaseUpdateFee() {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const amount = await contract.getSingleUpdateFee();
     return {
       amount: amount.toString(),
@@ -209,23 +214,25 @@ export class TonPriceFeedContract extends PriceFeedContract {
   }
 
   async getDataSources(): Promise<DataSource[]> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const dataSources = await contract.getDataSources();
     return dataSources.map((ds: DataSource) => ({
-      emitterChain: ds.emitterChain,
       emitterAddress: ds.emitterAddress.replace("0x", ""),
+      emitterChain: ds.emitterChain,
     }));
   }
 
   async getGovernanceDataSource(): Promise<DataSource> {
-    const contract = await this.getContract();
+    const contract = this.getContract();
     const result = await contract.getGovernanceDataSource();
     if (result === null) {
       throw new Error("Governance data source not found");
     }
     return {
-      emitterChain: result.emitterChain,
-      emitterAddress: result.emitterAddress,
+      // biome-ignore lint/style/noNonNullAssertion: <explanation>
+      emitterAddress: result!.emitterAddress,
+      // biome-ignore lint/style/noNonNullAssertion: <explanation>
+      emitterChain: result!.emitterChain,
     };
   }
 
@@ -233,10 +240,10 @@ export class TonPriceFeedContract extends PriceFeedContract {
     senderPrivateKey: PrivateKey,
     vaas: Buffer[],
   ): Promise<TxResult> {
-    const client = await this.chain.getClient();
-    const contract = await this.getContract();
-    const wallet = await this.chain.getWallet(senderPrivateKey);
-    const sender = await this.chain.getSender(senderPrivateKey);
+    const client = this.chain.getClient();
+    const contract = this.getContract();
+    const wallet = this.chain.getWallet(senderPrivateKey);
+    const sender = this.chain.getSender(senderPrivateKey);
     for (const vaa of vaas) {
       const fee = await contract.getUpdateFee(vaa);
       console.log(fee);
@@ -250,9 +257,12 @@ export class TonPriceFeedContract extends PriceFeedContract {
     const txDetails = await client.getTransactions(wallet.address, {
       limit: 1,
     });
-    const txHash = Buffer.from(txDetails[0].hash()).toString("hex");
-    const txInfo = JSON.stringify(txDetails[0].description, (_, value) =>
-      typeof value === "bigint" ? value.toString() : value,
+    const txHash = Buffer.from(
+      txDetails[0]?.hash() ?? Buffer.alloc(0),
+    ).toString("hex");
+    const txInfo = JSON.stringify(
+      txDetails[0]?.description ?? "{}",
+      (_, value) => (typeof value === "bigint" ? value.toString() : value),
     );
 
     return {
@@ -265,18 +275,21 @@ export class TonPriceFeedContract extends PriceFeedContract {
     senderPrivateKey: PrivateKey,
     vaa: Buffer,
   ): Promise<TxResult> {
-    const client = await this.chain.getClient();
-    const contract = await this.getContract();
-    const wallet = await this.chain.getWallet(senderPrivateKey);
-    const sender = await this.chain.getSender(senderPrivateKey);
+    const client = this.chain.getClient();
+    const contract = this.getContract();
+    const wallet = this.chain.getWallet(senderPrivateKey);
+    const sender = this.chain.getSender(senderPrivateKey);
     await contract.sendExecuteGovernanceAction(sender, vaa);
 
     const txDetails = await client.getTransactions(wallet.address, {
       limit: 1,
     });
-    const txHash = Buffer.from(txDetails[0].hash()).toString("hex");
-    const txInfo = JSON.stringify(txDetails[0].description, (_, value) =>
-      typeof value === "bigint" ? value.toString() : value,
+    const txHash = Buffer.from(
+      txDetails[0]?.hash() ?? Buffer.alloc(0),
+    ).toString("hex");
+    const txInfo = JSON.stringify(
+      txDetails[0]?.description ?? "{}",
+      (_, value) => (typeof value === "bigint" ? value.toString() : value),
     );
 
     return {
@@ -289,18 +302,21 @@ export class TonPriceFeedContract extends PriceFeedContract {
     senderPrivateKey: PrivateKey,
     newCode: Cell,
   ): Promise<TxResult> {
-    const client = await this.chain.getClient();
-    const contract = await this.getContract();
-    const wallet = await this.chain.getWallet(senderPrivateKey);
-    const sender = await this.chain.getSender(senderPrivateKey);
+    const client = this.chain.getClient();
+    const contract = this.getContract();
+    const wallet = this.chain.getWallet(senderPrivateKey);
+    const sender = this.chain.getSender(senderPrivateKey);
     await contract.sendUpgradeContract(sender, newCode);
 
     const txDetails = await client.getTransactions(wallet.address, {
       limit: 1,
     });
-    const txHash = Buffer.from(txDetails[0].hash()).toString("hex");
-    const txInfo = JSON.stringify(txDetails[0].description, (_, value) =>
-      typeof value === "bigint" ? value.toString() : value,
+    const txHash = Buffer.from(
+      txDetails[0]?.hash() ?? Buffer.alloc(0),
+    ).toString("hex");
+    const txInfo = JSON.stringify(
+      txDetails[0]?.description ?? "{}",
+      (_, value) => (typeof value === "bigint" ? value.toString() : value),
     );
 
     return {
@@ -311,8 +327,8 @@ export class TonPriceFeedContract extends PriceFeedContract {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: TonPriceFeedContract.type,
     };
   }

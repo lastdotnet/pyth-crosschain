@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "incremental": false,
+    "isolatedModules": false,
+    "noEmit": false,
+    "noUnusedLocals": false
+  },
+  "exclude": ["node_modules", "dist", "src/examples/", "**/__tests__/*"],
+  "extends": "./tsconfig.json"
+}

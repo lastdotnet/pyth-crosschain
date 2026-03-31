@@ -2,6 +2,7 @@ use {
     crate::{
         api::BlockchainState,
         chain::{ethereum::InstrumentedSignablePythContract, reader::BlockNumber},
+        config::ReplicaConfig,
         eth_utils::utils::EscalationPolicy,
         history::History,
         keeper::{
@@ -10,12 +11,8 @@ use {
         },
     },
     anyhow::Result,
-    ethers::types::U256,
-    std::{
-        collections::HashSet,
-        sync::Arc,
-        time::{SystemTime, UNIX_EPOCH},
-    },
+    std::time::{SystemTime, UNIX_EPOCH},
+    std::{collections::HashSet, sync::Arc},
     tokio::{
         spawn,
         sync::{mpsc, RwLock},
@@ -42,9 +39,9 @@ pub struct BlockRange {
 #[derive(Clone)]
 pub struct ProcessParams {
     pub contract: Arc<InstrumentedSignablePythContract>,
-    pub gas_limit: U256,
     pub escalation_policy: EscalationPolicy,
     pub chain_state: BlockchainState,
+    pub replica_config: Option<ReplicaConfig>,
     pub metrics: Arc<KeeperMetrics>,
     pub history: Arc<History>,
     pub fulfilled_requests_cache: Arc<RwLock<HashSet<u64>>>,

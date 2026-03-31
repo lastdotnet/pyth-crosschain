@@ -2,12 +2,21 @@
 
 import { PlusMinus } from "@phosphor-icons/react/dist/ssr/PlusMinus";
 import type { PriceData, PriceComponent } from "@pythnetwork/client";
+import { PriceStatus } from "@pythnetwork/client";
+import { DocumentTitle } from "@pythnetwork/component-library/DocumentTitle";
 import { Skeleton } from "@pythnetwork/component-library/Skeleton";
-import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useDateFormatter } from "react-aria";
 
 import styles from "./index.module.scss";
+import type {
+  LiveAggregatedPriceOrConfidenceProps,
+  LiveComponentConfidenceProps,
+  LiveComponentValueProps,
+  LivePriceOrConfidenceProps,
+  LiveValueProps,
+  PriceProps,
+} from "./types";
 import {
   useLivePriceComponent,
   useLivePriceData,
@@ -20,11 +29,7 @@ export const SKELETON_WIDTH = 20;
 export const LivePrice = ({
   publisherKey,
   ...props
-}: {
-  feedKey: string;
-  publisherKey?: string | undefined;
-  cluster: Cluster;
-}) =>
+}: LivePriceOrConfidenceProps) =>
   publisherKey === undefined ? (
     <LiveAggregatePrice {...props} />
   ) : (
@@ -34,14 +39,29 @@ export const LivePrice = ({
 const LiveAggregatePrice = ({
   feedKey,
   cluster,
-}: {
-  feedKey: string;
-  cluster: Cluster;
-}) => {
+  ...rest
+}: LiveAggregatedPriceOrConfidenceProps) => {
   const { prev, current } = useLivePriceData(cluster, feedKey);
-  return (
-    <Price current={current?.aggregate.price} prev={prev?.aggregate.price} />
-  );
+  if (current === undefined) {
+    return <Price {...rest} />;
+  } else if (current.status === PriceStatus.Trading) {
+    return (
+      <Price
+        {...rest}
+        current={current.price}
+        prev={prev?.price}
+        exponent={current.exponent}
+      />
+    );
+  } else {
+    return (
+      <Price
+        {...rest}
+        current={current.previousPrice}
+        exponent={current.exponent}
+      />
+    );
+  }
 };
 
 const LiveComponentPrice = ({
@@ -53,40 +73,51 @@ const LiveComponentPrice = ({
   publisherKey: string;
   cluster: Cluster;
 }) => {
-  const { prev, current } = useLivePriceComponent(
+  const { prev, current, exponent } = useLivePriceComponent(
     cluster,
     feedKey,
     publisherKey,
   );
-  return <Price current={current?.latest.price} prev={prev?.latest.price} />;
+  return (
+    <Price
+      current={current?.latest.price}
+      prev={prev?.latest.price}
+      exponent={exponent}
+    />
+  );
 };
 
 const Price = ({
   prev,
   current,
-}: {
-  prev?: number | undefined;
-  current?: number | undefined;
-}) =>
-  current === undefined ? (
-    <Skeleton width={SKELETON_WIDTH} />
-  ) : (
-    <span
-      className={styles.price}
-      data-direction={prev ? getChangeDirection(prev, current) : "flat"}
-    >
-      <FormattedPriceValue n={current} />
-    </span>
+  exponent,
+  updatePageTitle = false,
+}: PriceProps) => {
+  /** hooks */
+  const formatter = usePriceFormatter(exponent);
+
+  if (!current) return <Skeleton width={SKELETON_WIDTH} />;
+
+  /** local variables */
+  const val = formatter.format(current);
+
+  return (
+    <>
+      {updatePageTitle && <DocumentTitle prefix title={val} />}
+      <span
+        className={styles.price}
+        data-direction={prev ? getChangeDirection(prev, current) : "flat"}
+      >
+        {val}
+      </span>
+    </>
   );
+};
 
 export const LiveConfidence = ({
   publisherKey,
   ...props
-}: {
-  feedKey: string;
-  publisherKey?: string | undefined;
-  cluster: Cluster;
-}) =>
+}: LivePriceOrConfidenceProps) =>
   publisherKey === undefined ? (
     <LiveAggregateConfidence {...props} />
   ) : (
@@ -96,44 +127,56 @@ export const LiveConfidence = ({
 const LiveAggregateConfidence = ({
   feedKey,
   cluster,
-}: {
-  feedKey: string;
-  cluster: Cluster;
-}) => {
+}: LiveAggregatedPriceOrConfidenceProps) => {
   const { current } = useLivePriceData(cluster, feedKey);
-  return <Confidence confidence={current?.aggregate.confidence} />;
+  return (
+    <Confidence
+      confidence={
+        current &&
+        (current.status === PriceStatus.Trading
+          ? current.confidence
+          : current.previousConfidence)
+      }
+      exponent={current?.exponent}
+    />
+  );
 };
 
 const LiveComponentConfidence = ({
   feedKey,
   publisherKey,
   cluster,
-}: {
-  feedKey: string;
-  publisherKey: string;
-  cluster: Cluster;
-}) => {
+}: LiveComponentConfidenceProps) => {
   const { current } = useLivePriceComponent(cluster, feedKey, publisherKey);
-  return <Confidence confidence={current?.latest.confidence} />;
+  const { current: priceData } = useLivePriceData(cluster, feedKey);
+  return (
+    <Confidence
+      confidence={current?.latest.confidence}
+      exponent={priceData?.exponent}
+    />
+  );
 };
 
-const Confidence = ({ confidence }: { confidence?: number | undefined }) => (
-  <span className={styles.confidence}>
-    <PlusMinus className={styles.plusMinus} />
-    {confidence === undefined ? (
-      <Skeleton width={SKELETON_WIDTH} />
-    ) : (
-      <span>
-        <FormattedPriceValue n={confidence} />
-      </span>
-    )}
-  </span>
-);
+const Confidence = ({
+  confidence,
+  exponent,
+}: {
+  confidence?: number | undefined;
+  exponent?: number | undefined;
+}) => {
+  /** hooks */
+  const formatter = usePriceFormatter(exponent);
 
-const FormattedPriceValue = ({ n }: { n: number }) => {
-  const formatter = usePriceFormatter();
-
-  return useMemo(() => formatter.format(n), [n, formatter]);
+  return (
+    <span className={styles.confidence}>
+      <PlusMinus className={styles.plusMinus} />
+      {confidence === undefined ? (
+        <Skeleton width={SKELETON_WIDTH} />
+      ) : (
+        <span>{formatter.format(confidence)}</span>
+      )}
+    </span>
+  );
 };
 
 export const LiveLastUpdated = ({
@@ -153,7 +196,13 @@ export const LiveLastUpdated = ({
   });
   const formattedTimestamp = useMemo(() => {
     if (current) {
-      const timestamp = new Date(Number(current.timestamp * 1000n));
+      const timestamp = new Date(
+        Number(
+          (current.status === PriceStatus.Trading
+            ? current.timestamp
+            : current.previousTimestamp) * 1000n,
+        ),
+      );
       return isToday(timestamp)
         ? formatterWithoutDate.format(timestamp)
         : formatterWithDate.format(timestamp);
@@ -163,13 +212,6 @@ export const LiveLastUpdated = ({
   }, [current, formatterWithDate, formatterWithoutDate]);
 
   return formattedTimestamp ?? <Skeleton width={SKELETON_WIDTH} />;
-};
-
-type LiveValueProps<T extends keyof PriceData> = {
-  field: T;
-  feedKey: string;
-  defaultValue?: ReactNode | undefined;
-  cluster: Cluster;
 };
 
 export const LiveValue = <T extends keyof PriceData>({
@@ -192,14 +234,6 @@ export const LiveValue = <T extends keyof PriceData>({
   } else {
     return <Skeleton width={SKELETON_WIDTH} />;
   }
-};
-
-type LiveComponentValueProps<T extends keyof PriceComponent["latest"]> = {
-  field: T;
-  feedKey: string;
-  publisherKey: string;
-  defaultValue?: ReactNode | undefined;
-  cluster: Cluster;
 };
 
 export const LiveComponentValue = <T extends keyof PriceComponent["latest"]>({

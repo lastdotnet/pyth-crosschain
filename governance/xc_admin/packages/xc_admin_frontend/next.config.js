@@ -1,28 +1,41 @@
-const path = require('path')
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['@pythnetwork/client'],
+
   output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
-  webpack(config, { isServer }) {
-    config.experiments = { asyncWebAssembly: true, layers: true }
-    config.resolve.fallback = { fs: false }
-    const fileLoaderRule = config.module.rules.find(
-      (rule) => rule.test && rule.test?.test?.('.svg')
-    )
-    fileLoaderRule.exclude = /\.inline\.svg$/
-    config.module.rules.push({
-      test: /\.inline\.svg$/,
-      loader: require.resolve('@svgr/webpack'),
-    })
-
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@images': path.resolve(__dirname, 'images/'),
-    }
-
-    return config
+  turbopack: {
+    resolveAlias: {
+      fs: {
+        /**
+         * HACK ALERT: There are some react hooks
+         * that are importing things from @coral-xyz/anchor,
+         * which is a huge offender of including node-only deps
+         * in its library, even if it's supposed to have isomorphic exports.
+         * Since the "correct" fix would require substantial rearchitecting
+         * of this project, shimming accidental node imports with an
+         * empty module is what we'll use
+         */
+        browser: './turbopack-hacks/empty.ts',
+      },
+    },
+    resolveExtensions: [
+      '.ts',
+      '.tsx',
+      '.js',
+      '.jsx',
+      '.mts',
+      '.mjs',
+      '.cts',
+      '.cjs',
+    ],
+    rules: {
+      '*.inline.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
 }
 
-module.exports = nextConfig
+export default nextConfig

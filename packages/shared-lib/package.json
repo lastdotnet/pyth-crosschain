@@ -1,0 +1,152 @@
+{
+  "dependencies": {
+    "dayjs": "catalog:",
+    "uuid": "catalog:"
+  },
+  "description": "a collection of shared typescript typings and various utilities that are generally applicable across the JS / TS stack",
+  "devDependencies": {
+    "@cprussin/tsconfig": "catalog:",
+    "@pythnetwork/jest-config": "workspace:",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/yargs": "catalog:",
+    "jest": "catalog:"
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "exports": {
+    "./constants": {
+      "import": {
+        "default": "./dist/esm/constants/index.mjs",
+        "types": "./dist/esm/constants/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/constants/index.cjs",
+        "types": "./dist/cjs/constants/index.d.ts"
+      }
+    },
+    "./constants/no-op": {
+      "import": {
+        "default": "./dist/esm/constants/no-op.mjs",
+        "types": "./dist/esm/constants/no-op.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/constants/no-op.cjs",
+        "types": "./dist/cjs/constants/no-op.d.ts"
+      }
+    },
+    "./emitter": {
+      "import": {
+        "default": "./dist/esm/emitter/index.mjs",
+        "types": "./dist/esm/emitter/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/emitter/index.cjs",
+        "types": "./dist/cjs/emitter/index.d.ts"
+      }
+    },
+    "./package.json": "./package.json",
+    "./types": {
+      "import": {
+        "default": "./dist/esm/types/index.mjs",
+        "types": "./dist/esm/types/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/types/index.cjs",
+        "types": "./dist/cjs/types/index.d.ts"
+      }
+    },
+    "./util": {
+      "import": {
+        "default": "./dist/esm/util/index.mjs",
+        "types": "./dist/esm/util/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/index.cjs",
+        "types": "./dist/cjs/util/index.d.ts"
+      }
+    },
+    "./util/create-uuid": {
+      "import": {
+        "default": "./dist/esm/util/create-uuid.mjs",
+        "types": "./dist/esm/util/create-uuid.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/create-uuid.cjs",
+        "types": "./dist/cjs/util/create-uuid.d.ts"
+      }
+    },
+    "./util/error-to-string": {
+      "import": {
+        "default": "./dist/esm/util/error-to-string.mjs",
+        "types": "./dist/esm/util/error-to-string.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/error-to-string.cjs",
+        "types": "./dist/cjs/util/error-to-string.d.ts"
+      }
+    },
+    "./util/is-null-or-undefined": {
+      "import": {
+        "default": "./dist/esm/util/is-null-or-undefined.mjs",
+        "types": "./dist/esm/util/is-null-or-undefined.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/is-null-or-undefined.cjs",
+        "types": "./dist/cjs/util/is-null-or-undefined.d.ts"
+      }
+    },
+    "./util/is-number": {
+      "import": {
+        "default": "./dist/esm/util/is-number.mjs",
+        "types": "./dist/esm/util/is-number.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/is-number.cjs",
+        "types": "./dist/cjs/util/is-number.d.ts"
+      }
+    },
+    "./util/omit-keys": {
+      "import": {
+        "default": "./dist/esm/util/omit-keys.mjs",
+        "types": "./dist/esm/util/omit-keys.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/omit-keys.cjs",
+        "types": "./dist/cjs/util/omit-keys.d.ts"
+      }
+    },
+    "./util/wait": {
+      "import": {
+        "default": "./dist/esm/util/wait.mjs",
+        "types": "./dist/esm/util/wait.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/util/wait.cjs",
+        "types": "./dist/cjs/util/wait.d.ts"
+      }
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.mjs",
+  "name": "@pythnetwork/shared-lib",
+  "private": true,
+  "repository": {
+    "directory": "packages/shared-lib",
+    "type": "git",
+    "url": "https://github.com/pyth-network/pyth-crosschain"
+  },
+  "scripts": {
+    "build": "ts-duality --copyOtherFiles",
+    "clean": "rm -rf ./dist",
+    "test:types": "tsc",
+    "test:unit": "test-unit"
+  },
+  "type": "module",
+  "types": "./dist/cjs/index.d.ts",
+  "version": "0.0.0"
+}

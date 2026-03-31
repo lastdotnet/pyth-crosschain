@@ -10,7 +10,6 @@ venv
 .env
 bigtable-admin.json
 bigtable-writer.json
-.vscode
 .dccache
 .aptos
 tsconfig.tsbuildinfo
@@ -18,6 +17,7 @@ tsconfig.tsbuildinfo
 *mnemonic*
 */*.sui.log*
 __pycache__
+.hypothesis/
 .DS_Store
 .vercel
 .direnv
@@ -25,6 +25,13 @@ __pycache__
 .turbo/
 .cursorrules
 .corepack
+.pnpm-store
 justfile
 
 cdk.out/*
+dist/
+
+**/.ai/** 
+apps/mcp/docs/
+CLAUDE.md
+.claude/**

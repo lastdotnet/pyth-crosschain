@@ -16,6 +16,7 @@ use {
 mod doc_examples;
 mod metrics_middleware;
 mod rest;
+pub mod token;
 pub mod types;
 mod ws;
 
@@ -93,6 +94,10 @@ where
 
     #[derive(OpenApi)]
     #[openapi(
+        servers(
+            (url = "https://hermes.pyth.network", description = "Public endpoint"),
+            (url = "https://hermes-beta.pyth.network", description = "Beta (for testnet Aptos and Sui testnets)"),
+        ),
         paths(
             rest::get_price_feed,
             rest::get_vaa,
@@ -101,7 +106,6 @@ where
             rest::latest_vaas,
             rest::price_feed_ids,
             rest::latest_price_updates,
-            rest::latest_twaps,
             rest::latest_publisher_stake_caps,
             rest::timestamp_price_updates,
             rest::price_feeds_metadata,
@@ -127,8 +131,6 @@ where
                 types::ParsedPublisherStakeCapsUpdate,
                 types::ParsedPublisherStakeCap,
                 types::AssetType,
-                types::TwapsResponse,
-                types::ParsedPriceFeedTwap,
             )
         ),
         tags(

@@ -1,49 +1,20 @@
 {
-  "name": "@pythnetwork/component-library",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": "22"
-  },
-  "exports": {
-    "./*": {
-      "types": "./dist/esm/*/index.d.ts",
-      "default": "./dist/esm/*/index.jsx"
-    },
-    "./useData": {
-      "types": "./dist/esm/useData/index.d.ts",
-      "default": "./dist/esm/useData/index.js"
-    },
-    "./theme": "./dist/esm/theme.scss"
-  },
-  "scripts": {
-    "build:declarations": "tsc --project tsconfig.build.json --outDir ./dist/esm",
-    "build:esm": "babel src --out-dir ./dist/esm --extensions .ts && babel src --out-dir ./dist/esm --extensions .tsx --out-file-extension .jsx",
-    "build:scss": "copyfiles -u 1 \"src/**/*.scss\" dist/esm",
-    "build:storybook": "storybook build",
-    "build:svg": "copyfiles -u 1 \"src/**/*.svg\" dist/esm",
-    "fix:format": "prettier --write .",
-    "fix:lint:eslint": "eslint --fix .",
-    "fix:lint:stylelint": "stylelint --fix 'src/**/*.scss'",
-    "start:dev": "storybook dev --port 4000 --no-open",
-    "test:format": "prettier --check .",
-    "test:lint:eslint": "eslint . --max-warnings 0",
-    "test:lint:stylelint": "stylelint 'src/**/*.scss' --max-warnings 0",
-    "test:types": "tsc"
-  },
-  "peerDependencies": {
-    "next": "catalog:",
-    "react": "catalog:"
-  },
   "dependencies": {
     "@amplitude/analytics-browser": "catalog:",
     "@amplitude/plugin-autocapture-browser": "catalog:",
     "@axe-core/react": "catalog:",
+    "@base-ui/react": "catalog:",
+    "@internationalized/date": "^3.10.1",
     "@next/third-parties": "catalog:",
+    "@pythnetwork/react-hooks": "workspace:",
+    "@pythnetwork/shared-lib": "workspace:",
     "@react-hookz/web": "catalog:",
+    "ag-grid-community": "catalog:",
+    "ag-grid-react": "catalog:",
     "bcp-47": "catalog:",
     "clsx": "catalog:",
+    "color": "catalog:",
+    "dayjs": "catalog:",
     "modern-normalize": "catalog:",
     "motion": "catalog:",
     "next-themes": "catalog:",
@@ -51,44 +22,637 @@
     "react-aria": "catalog:",
     "react-aria-components": "catalog:",
     "react-dom": "catalog:",
+    "simplestyle-js": "catalog:",
     "swr": "catalog:"
   },
   "devDependencies": {
     "@babel/cli": "catalog:",
     "@babel/core": "catalog:",
     "@babel/preset-typescript": "catalog:",
-    "@cprussin/eslint-config": "catalog:",
-    "@cprussin/jest-config": "catalog:",
-    "@cprussin/prettier-config": "catalog:",
     "@cprussin/tsconfig": "catalog:",
     "@phosphor-icons/react": "catalog:",
-    "@storybook/addon-essentials": "catalog:",
+    "@pythnetwork/jest-config": "workspace:",
     "@storybook/addon-styling-webpack": "catalog:",
     "@storybook/addon-themes": "catalog:",
-    "@storybook/blocks": "catalog:",
     "@storybook/nextjs": "catalog:",
     "@storybook/react": "catalog:",
     "@svgr/webpack": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
     "@types/jest": "catalog:",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "autoprefixer": "catalog:",
     "babel-plugin-react-compiler": "catalog:",
     "copyfiles": "catalog:",
     "css-loader": "catalog:",
-    "eslint": "catalog:",
     "jest": "catalog:",
     "next": "catalog:",
     "postcss": "catalog:",
     "postcss-loader": "catalog:",
-    "prettier": "catalog:",
     "react": "catalog:",
     "sass": "catalog:",
     "sass-loader": "catalog:",
     "storybook": "catalog:",
     "style-loader": "catalog:",
     "stylelint": "catalog:",
-    "stylelint-config-standard-scss": "catalog:",
-    "typescript": "catalog:"
-  }
+    "stylelint-config-standard-scss": "catalog:"
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "exports": {
+    "./AppShell": {
+      "default": "./dist/AppShell/index.mjs",
+      "types": "./dist/AppShell/index.d.ts"
+    },
+    "./AppShell/amplitude": {
+      "default": "./dist/AppShell/amplitude.mjs",
+      "types": "./dist/AppShell/amplitude.d.ts"
+    },
+    "./AppShell/body-providers": {
+      "default": "./dist/AppShell/body-providers.mjs",
+      "types": "./dist/AppShell/body-providers.d.ts"
+    },
+    "./AppShell/fonts": {
+      "default": "./dist/AppShell/fonts.mjs",
+      "types": "./dist/AppShell/fonts.d.ts"
+    },
+    "./AppShell/html-with-lang": {
+      "default": "./dist/AppShell/html-with-lang.mjs",
+      "types": "./dist/AppShell/html-with-lang.d.ts"
+    },
+    "./AppShell/i18n-provider": {
+      "default": "./dist/AppShell/i18n-provider.mjs",
+      "types": "./dist/AppShell/i18n-provider.d.ts"
+    },
+    "./AppShell/report-accessibility": {
+      "default": "./dist/AppShell/report-accessibility.mjs",
+      "types": "./dist/AppShell/report-accessibility.d.ts"
+    },
+    "./AppShell/router-provider": {
+      "default": "./dist/AppShell/router-provider.mjs",
+      "types": "./dist/AppShell/router-provider.d.ts"
+    },
+    "./AppShell/tabs": {
+      "default": "./dist/AppShell/tabs.mjs",
+      "types": "./dist/AppShell/tabs.d.ts"
+    },
+    "./Badge": {
+      "default": "./dist/Badge/index.mjs",
+      "types": "./dist/Badge/index.d.ts"
+    },
+    "./Breadcrumbs": {
+      "default": "./dist/Breadcrumbs/index.mjs",
+      "types": "./dist/Breadcrumbs/index.d.ts"
+    },
+    "./Button": {
+      "default": "./dist/Button/index.mjs",
+      "types": "./dist/Button/index.d.ts"
+    },
+    "./Card": {
+      "default": "./dist/Card/index.mjs",
+      "types": "./dist/Card/index.d.ts"
+    },
+    "./CopyButton": {
+      "default": "./dist/CopyButton/index.mjs",
+      "types": "./dist/CopyButton/index.d.ts"
+    },
+    "./CrossfadeTabPanels": {
+      "default": "./dist/CrossfadeTabPanels/index.mjs",
+      "types": "./dist/CrossfadeTabPanels/index.d.ts"
+    },
+    "./compose-providers": {
+      "default": "./dist/compose-providers.mjs",
+      "types": "./dist/compose-providers.d.ts"
+    },
+    "./DatePicker": {
+      "default": "./dist/DatePicker/index.mjs",
+      "types": "./dist/DatePicker/index.d.ts"
+    },
+    "./DocumentTitle": {
+      "default": "./dist/DocumentTitle/index.mjs",
+      "types": "./dist/DocumentTitle/index.d.ts"
+    },
+    "./DocumentTitle/document-title.test": {
+      "default": "./dist/DocumentTitle/document-title.test.mjs",
+      "types": "./dist/DocumentTitle/document-title.test.d.ts"
+    },
+    "./DropdownCaretDown": {
+      "default": "./dist/DropdownCaretDown/index.mjs",
+      "types": "./dist/DropdownCaretDown/index.d.ts"
+    },
+    "./EntityList": {
+      "default": "./dist/EntityList/index.mjs",
+      "types": "./dist/EntityList/index.d.ts"
+    },
+    "./ErrorPage": {
+      "default": "./dist/ErrorPage/index.mjs",
+      "types": "./dist/ErrorPage/index.d.ts"
+    },
+    "./Footer": {
+      "default": "./dist/Footer/index.mjs",
+      "types": "./dist/Footer/index.d.ts"
+    },
+    "./Header": {
+      "default": "./dist/Header/index.mjs",
+      "types": "./dist/Header/index.d.ts"
+    },
+    "./Header/theme-switch": {
+      "default": "./dist/Header/theme-switch.mjs",
+      "types": "./dist/Header/theme-switch.d.ts"
+    },
+    "./InfoBox": {
+      "default": "./dist/InfoBox/index.mjs",
+      "types": "./dist/InfoBox/index.d.ts"
+    },
+    "./Input": {
+      "default": "./dist/Input/index.mjs",
+      "types": "./dist/Input/index.d.ts"
+    },
+    "./Link": {
+      "default": "./dist/Link/index.mjs",
+      "types": "./dist/Link/index.d.ts"
+    },
+    "./Logo": {
+      "default": "./dist/Logo/index.mjs",
+      "types": "./dist/Logo/index.d.ts"
+    },
+    "./MainNavTabs": {
+      "default": "./dist/MainNavTabs/index.mjs",
+      "types": "./dist/MainNavTabs/index.d.ts"
+    },
+    "./Meter": {
+      "default": "./dist/Meter/index.mjs",
+      "types": "./dist/Meter/index.d.ts"
+    },
+    "./MobileNavTabs": {
+      "default": "./dist/MobileNavTabs/index.mjs",
+      "types": "./dist/MobileNavTabs/index.d.ts"
+    },
+    "./ModalDialog": {
+      "default": "./dist/ModalDialog/index.mjs",
+      "types": "./dist/ModalDialog/index.d.ts"
+    },
+    "./NoResults": {
+      "default": "./dist/NoResults/index.mjs",
+      "types": "./dist/NoResults/index.d.ts"
+    },
+    "./NotFoundPage": {
+      "default": "./dist/NotFoundPage/index.mjs",
+      "types": "./dist/NotFoundPage/index.d.ts"
+    },
+    "./overlay-visible-context": {
+      "default": "./dist/overlay-visible-context.mjs",
+      "types": "./dist/overlay-visible-context.d.ts"
+    },
+    "./Paginator": {
+      "default": "./dist/Paginator/index.mjs",
+      "types": "./dist/Paginator/index.d.ts"
+    },
+    "./Popover": {
+      "default": "./dist/Popover/index.mjs",
+      "types": "./dist/Popover/index.d.ts"
+    },
+    "./package.json": "./package.json",
+    "./SearchButton": {
+      "default": "./dist/SearchButton/index.mjs",
+      "types": "./dist/SearchButton/index.d.ts"
+    },
+    "./SearchInput": {
+      "default": "./dist/SearchInput/index.mjs",
+      "types": "./dist/SearchInput/index.d.ts"
+    },
+    "./Select": {
+      "default": "./dist/Select/index.mjs",
+      "types": "./dist/Select/index.d.ts"
+    },
+    "./SingleToggleGroup": {
+      "default": "./dist/SingleToggleGroup/index.mjs",
+      "types": "./dist/SingleToggleGroup/index.d.ts"
+    },
+    "./Skeleton": {
+      "default": "./dist/Skeleton/index.mjs",
+      "types": "./dist/Skeleton/index.d.ts"
+    },
+    "./Spinner": {
+      "default": "./dist/Spinner/index.mjs",
+      "types": "./dist/Spinner/index.d.ts"
+    },
+    "./StatCard": {
+      "default": "./dist/StatCard/index.mjs",
+      "types": "./dist/StatCard/index.d.ts"
+    },
+    "./Status": {
+      "default": "./dist/Status/index.mjs",
+      "types": "./dist/Status/index.d.ts"
+    },
+    "./Switch": {
+      "default": "./dist/Switch/index.mjs",
+      "types": "./dist/Switch/index.d.ts"
+    },
+    "./SymbolPairTag": {
+      "default": "./dist/SymbolPairTag/index.mjs",
+      "types": "./dist/SymbolPairTag/index.d.ts"
+    },
+    "./social-links": {
+      "default": "./dist/social-links.mjs",
+      "types": "./dist/social-links.d.ts"
+    },
+    "./styles/theme": {
+      "default": "./dist/styles/theme.mjs",
+      "types": "./dist/styles/theme.d.ts"
+    },
+    "./TabList": {
+      "default": "./dist/TabList/index.mjs",
+      "types": "./dist/TabList/index.d.ts"
+    },
+    "./Table": {
+      "default": "./dist/Table/index.mjs",
+      "types": "./dist/Table/index.d.ts"
+    },
+    "./TableGrid": {
+      "default": "./dist/TableGrid/index.mjs",
+      "types": "./dist/TableGrid/index.d.ts"
+    },
+    "./TableGrid/dummy-row-data": {
+      "default": "./dist/TableGrid/dummy-row-data.mjs",
+      "types": "./dist/TableGrid/dummy-row-data.d.ts"
+    },
+    "./TableGrid/table-grid-props": {
+      "default": "./dist/TableGrid/table-grid-props.mjs",
+      "types": "./dist/TableGrid/table-grid-props.d.ts"
+    },
+    "./Term": {
+      "default": "./dist/Term/index.mjs",
+      "types": "./dist/Term/index.d.ts"
+    },
+    "./Tooltip": {
+      "default": "./dist/Tooltip/index.mjs",
+      "types": "./dist/Tooltip/index.d.ts"
+    },
+    "./theme": "./dist/theme.scss",
+    "./themeV2": "./dist/v2/v2-theme.css",
+    "./unstyled/Breadcrumbs": {
+      "default": "./dist/unstyled/Breadcrumbs/index.mjs",
+      "types": "./dist/unstyled/Breadcrumbs/index.d.ts"
+    },
+    "./unstyled/Button": {
+      "default": "./dist/unstyled/Button/index.mjs",
+      "types": "./dist/unstyled/Button/index.d.ts"
+    },
+    "./unstyled/Dialog": {
+      "default": "./dist/unstyled/Dialog/index.mjs",
+      "types": "./dist/unstyled/Dialog/index.d.ts"
+    },
+    "./unstyled/GridList": {
+      "default": "./dist/unstyled/GridList/index.mjs",
+      "types": "./dist/unstyled/GridList/index.d.ts"
+    },
+    "./unstyled/Label": {
+      "default": "./dist/unstyled/Label/index.mjs",
+      "types": "./dist/unstyled/Label/index.d.ts"
+    },
+    "./unstyled/Link": {
+      "default": "./dist/unstyled/Link/index.mjs",
+      "types": "./dist/unstyled/Link/index.d.ts"
+    },
+    "./unstyled/ListBox": {
+      "default": "./dist/unstyled/ListBox/index.mjs",
+      "types": "./dist/unstyled/ListBox/index.d.ts"
+    },
+    "./unstyled/Meter": {
+      "default": "./dist/unstyled/Meter/index.mjs",
+      "types": "./dist/unstyled/Meter/index.d.ts"
+    },
+    "./unstyled/Popover": {
+      "default": "./dist/unstyled/Popover/index.mjs",
+      "types": "./dist/unstyled/Popover/index.d.ts"
+    },
+    "./unstyled/SearchField": {
+      "default": "./dist/unstyled/SearchField/index.mjs",
+      "types": "./dist/unstyled/SearchField/index.d.ts"
+    },
+    "./unstyled/Select": {
+      "default": "./dist/unstyled/Select/index.mjs",
+      "types": "./dist/unstyled/Select/index.d.ts"
+    },
+    "./unstyled/Switch": {
+      "default": "./dist/unstyled/Switch/index.mjs",
+      "types": "./dist/unstyled/Switch/index.d.ts"
+    },
+    "./unstyled/Table": {
+      "default": "./dist/unstyled/Table/index.mjs",
+      "types": "./dist/unstyled/Table/index.d.ts"
+    },
+    "./unstyled/Tabs": {
+      "default": "./dist/unstyled/Tabs/index.mjs",
+      "types": "./dist/unstyled/Tabs/index.d.ts"
+    },
+    "./unstyled/TextField": {
+      "default": "./dist/unstyled/TextField/index.mjs",
+      "types": "./dist/unstyled/TextField/index.d.ts"
+    },
+    "./unstyled/Toolbar": {
+      "default": "./dist/unstyled/Toolbar/index.mjs",
+      "types": "./dist/unstyled/Toolbar/index.d.ts"
+    },
+    "./use-prefetch": {
+      "default": "./dist/use-prefetch.mjs",
+      "types": "./dist/use-prefetch.d.ts"
+    },
+    "./useAlert": {
+      "default": "./dist/useAlert/index.mjs",
+      "types": "./dist/useAlert/index.d.ts"
+    },
+    "./useCopy": {
+      "default": "./dist/useCopy/index.mjs",
+      "types": "./dist/useCopy/index.d.ts"
+    },
+    "./useData": {
+      "default": "./dist/useData/index.mjs",
+      "types": "./dist/useData/index.d.ts"
+    },
+    "./useDrawer": {
+      "default": "./dist/useDrawer/index.mjs",
+      "types": "./dist/useDrawer/index.d.ts"
+    },
+    "./useLogger": {
+      "default": "./dist/useLogger/index.mjs",
+      "types": "./dist/useLogger/index.d.ts"
+    },
+    "./useQueryParamsPagination": {
+      "default": "./dist/useQueryParamsPagination/index.mjs",
+      "types": "./dist/useQueryParamsPagination/index.d.ts"
+    },
+    "./Virtualizer": {
+      "default": "./dist/Virtualizer/index.mjs",
+      "types": "./dist/Virtualizer/index.d.ts"
+    },
+    "./v2": {
+      "default": "./dist/v2/index.mjs",
+      "types": "./dist/v2/index.d.ts"
+    },
+    "./v2/__stories__/helpers": {
+      "default": "./dist/v2/__stories__/helpers.mjs",
+      "types": "./dist/v2/__stories__/helpers.d.ts"
+    },
+    "./v2/components": {
+      "default": "./dist/v2/components/index.mjs",
+      "types": "./dist/v2/components/index.d.ts"
+    },
+    "./v2/components/ActionsMenu": {
+      "default": "./dist/v2/components/ActionsMenu/index.mjs",
+      "types": "./dist/v2/components/ActionsMenu/index.d.ts"
+    },
+    "./v2/components/ActionsMenu/ActionsMenu": {
+      "default": "./dist/v2/components/ActionsMenu/ActionsMenu.mjs",
+      "types": "./dist/v2/components/ActionsMenu/ActionsMenu.d.ts"
+    },
+    "./v2/components/ActionsMenu/ActionsMenu.styles": {
+      "default": "./dist/v2/components/ActionsMenu/ActionsMenu.styles.mjs",
+      "types": "./dist/v2/components/ActionsMenu/ActionsMenu.styles.d.ts"
+    },
+    "./v2/components/Avatar": {
+      "default": "./dist/v2/components/Avatar/index.mjs",
+      "types": "./dist/v2/components/Avatar/index.d.ts"
+    },
+    "./v2/components/Avatar/Avatar": {
+      "default": "./dist/v2/components/Avatar/Avatar.mjs",
+      "types": "./dist/v2/components/Avatar/Avatar.d.ts"
+    },
+    "./v2/components/Avatar/Avatar.styles": {
+      "default": "./dist/v2/components/Avatar/Avatar.styles.mjs",
+      "types": "./dist/v2/components/Avatar/Avatar.styles.d.ts"
+    },
+    "./v2/components/Badge": {
+      "default": "./dist/v2/components/Badge/index.mjs",
+      "types": "./dist/v2/components/Badge/index.d.ts"
+    },
+    "./v2/components/Badge/Badge": {
+      "default": "./dist/v2/components/Badge/Badge.mjs",
+      "types": "./dist/v2/components/Badge/Badge.d.ts"
+    },
+    "./v2/components/Badge/Badge.styles": {
+      "default": "./dist/v2/components/Badge/Badge.styles.mjs",
+      "types": "./dist/v2/components/Badge/Badge.styles.d.ts"
+    },
+    "./v2/components/Badge/types": {
+      "default": "./dist/v2/components/Badge/types.mjs",
+      "types": "./dist/v2/components/Badge/types.d.ts"
+    },
+    "./v2/components/Button": {
+      "default": "./dist/v2/components/Button/index.mjs",
+      "types": "./dist/v2/components/Button/index.d.ts"
+    },
+    "./v2/components/Button/Button": {
+      "default": "./dist/v2/components/Button/Button.mjs",
+      "types": "./dist/v2/components/Button/Button.d.ts"
+    },
+    "./v2/components/Button/Button.styles": {
+      "default": "./dist/v2/components/Button/Button.styles.mjs",
+      "types": "./dist/v2/components/Button/Button.styles.d.ts"
+    },
+    "./v2/components/Button/IconButton": {
+      "default": "./dist/v2/components/Button/IconButton.mjs",
+      "types": "./dist/v2/components/Button/IconButton.d.ts"
+    },
+    "./v2/components/Button/types": {
+      "default": "./dist/v2/components/Button/types.mjs",
+      "types": "./dist/v2/components/Button/types.d.ts"
+    },
+    "./v2/components/Card": {
+      "default": "./dist/v2/components/Card/index.mjs",
+      "types": "./dist/v2/components/Card/index.d.ts"
+    },
+    "./v2/components/Card/Card": {
+      "default": "./dist/v2/components/Card/Card.mjs",
+      "types": "./dist/v2/components/Card/Card.d.ts"
+    },
+    "./v2/components/Card/Card.styles": {
+      "default": "./dist/v2/components/Card/Card.styles.mjs",
+      "types": "./dist/v2/components/Card/Card.styles.d.ts"
+    },
+    "./v2/components/Card/types": {
+      "default": "./dist/v2/components/Card/types.mjs",
+      "types": "./dist/v2/components/Card/types.d.ts"
+    },
+    "./v2/components/Checkbox": {
+      "default": "./dist/v2/components/Checkbox/index.mjs",
+      "types": "./dist/v2/components/Checkbox/index.d.ts"
+    },
+    "./v2/components/Checkbox/Checkbox": {
+      "default": "./dist/v2/components/Checkbox/Checkbox.mjs",
+      "types": "./dist/v2/components/Checkbox/Checkbox.d.ts"
+    },
+    "./v2/components/Checkbox/Checkbox.styles": {
+      "default": "./dist/v2/components/Checkbox/Checkbox.styles.mjs",
+      "types": "./dist/v2/components/Checkbox/Checkbox.styles.d.ts"
+    },
+    "./v2/components/CheckboxGroup": {
+      "default": "./dist/v2/components/CheckboxGroup/index.mjs",
+      "types": "./dist/v2/components/CheckboxGroup/index.d.ts"
+    },
+    "./v2/components/CheckboxGroup/CheckboxGroup": {
+      "default": "./dist/v2/components/CheckboxGroup/CheckboxGroup.mjs",
+      "types": "./dist/v2/components/CheckboxGroup/CheckboxGroup.d.ts"
+    },
+    "./v2/components/CheckboxGroup/CheckboxGroup.styles": {
+      "default": "./dist/v2/components/CheckboxGroup/CheckboxGroup.styles.mjs",
+      "types": "./dist/v2/components/CheckboxGroup/CheckboxGroup.styles.d.ts"
+    },
+    "./v2/components/Dialog": {
+      "default": "./dist/v2/components/Dialog/index.mjs",
+      "types": "./dist/v2/components/Dialog/index.d.ts"
+    },
+    "./v2/components/Dialog/Dialog": {
+      "default": "./dist/v2/components/Dialog/Dialog.mjs",
+      "types": "./dist/v2/components/Dialog/Dialog.d.ts"
+    },
+    "./v2/components/Dialog/Dialog.styles": {
+      "default": "./dist/v2/components/Dialog/Dialog.styles.mjs",
+      "types": "./dist/v2/components/Dialog/Dialog.styles.d.ts"
+    },
+    "./v2/components/HtmlWithLang": {
+      "default": "./dist/v2/components/HtmlWithLang/index.mjs",
+      "types": "./dist/v2/components/HtmlWithLang/index.d.ts"
+    },
+    "./v2/components/HtmlWithLang/HtmlWithLang": {
+      "default": "./dist/v2/components/HtmlWithLang/HtmlWithLang.mjs",
+      "types": "./dist/v2/components/HtmlWithLang/HtmlWithLang.d.ts"
+    },
+    "./v2/components/HtmlWithLang/types": {
+      "default": "./dist/v2/components/HtmlWithLang/types.mjs",
+      "types": "./dist/v2/components/HtmlWithLang/types.d.ts"
+    },
+    "./v2/components/Input": {
+      "default": "./dist/v2/components/Input/index.mjs",
+      "types": "./dist/v2/components/Input/index.d.ts"
+    },
+    "./v2/components/Input/Input": {
+      "default": "./dist/v2/components/Input/Input.mjs",
+      "types": "./dist/v2/components/Input/Input.d.ts"
+    },
+    "./v2/components/Input/Input.styles": {
+      "default": "./dist/v2/components/Input/Input.styles.mjs",
+      "types": "./dist/v2/components/Input/Input.styles.d.ts"
+    },
+    "./v2/components/LeftNav": {
+      "default": "./dist/v2/components/LeftNav/index.mjs",
+      "types": "./dist/v2/components/LeftNav/index.d.ts"
+    },
+    "./v2/components/LeftNav/LeftNav": {
+      "default": "./dist/v2/components/LeftNav/LeftNav.mjs",
+      "types": "./dist/v2/components/LeftNav/LeftNav.d.ts"
+    },
+    "./v2/components/LeftNav/LeftNav.styles": {
+      "default": "./dist/v2/components/LeftNav/LeftNav.styles.mjs",
+      "types": "./dist/v2/components/LeftNav/LeftNav.styles.d.ts"
+    },
+    "./v2/components/LeftNav/types": {
+      "default": "./dist/v2/components/LeftNav/types.mjs",
+      "types": "./dist/v2/components/LeftNav/types.d.ts"
+    },
+    "./v2/components/NavigationButtonLink": {
+      "default": "./dist/v2/components/NavigationButtonLink/index.mjs",
+      "types": "./dist/v2/components/NavigationButtonLink/index.d.ts"
+    },
+    "./v2/components/NavigationButtonLink/ButtonLink": {
+      "default": "./dist/v2/components/NavigationButtonLink/ButtonLink.mjs",
+      "types": "./dist/v2/components/NavigationButtonLink/ButtonLink.d.ts"
+    },
+    "./v2/components/NavigationButtonLink/ButtonLink.styles": {
+      "default": "./dist/v2/components/NavigationButtonLink/ButtonLink.styles.mjs",
+      "types": "./dist/v2/components/NavigationButtonLink/ButtonLink.styles.d.ts"
+    },
+    "./v2/components/Spinner": {
+      "default": "./dist/v2/components/Spinner/index.mjs",
+      "types": "./dist/v2/components/Spinner/index.d.ts"
+    },
+    "./v2/components/Spinner/Spinner": {
+      "default": "./dist/v2/components/Spinner/Spinner.mjs",
+      "types": "./dist/v2/components/Spinner/Spinner.d.ts"
+    },
+    "./v2/components/Spinner/Spinner.styles": {
+      "default": "./dist/v2/components/Spinner/Spinner.styles.mjs",
+      "types": "./dist/v2/components/Spinner/Spinner.styles.d.ts"
+    },
+    "./v2/components/Switch": {
+      "default": "./dist/v2/components/Switch/index.mjs",
+      "types": "./dist/v2/components/Switch/index.d.ts"
+    },
+    "./v2/components/Switch/Switch": {
+      "default": "./dist/v2/components/Switch/Switch.mjs",
+      "types": "./dist/v2/components/Switch/Switch.d.ts"
+    },
+    "./v2/components/Switch/Switch.styles": {
+      "default": "./dist/v2/components/Switch/Switch.styles.mjs",
+      "types": "./dist/v2/components/Switch/Switch.styles.d.ts"
+    },
+    "./v2/components/Text": {
+      "default": "./dist/v2/components/Text/index.mjs",
+      "types": "./dist/v2/components/Text/index.d.ts"
+    },
+    "./v2/components/Text/Text": {
+      "default": "./dist/v2/components/Text/Text.mjs",
+      "types": "./dist/v2/components/Text/Text.d.ts"
+    },
+    "./v2/components/Text/Text.styles": {
+      "default": "./dist/v2/components/Text/Text.styles.mjs",
+      "types": "./dist/v2/components/Text/Text.styles.d.ts"
+    },
+    "./v2/svg/PythLogo": {
+      "default": "./dist/v2/svg/PythLogo.mjs",
+      "types": "./dist/v2/svg/PythLogo.d.ts"
+    },
+    "./v2/theme": {
+      "default": "./dist/v2/theme/index.mjs",
+      "types": "./dist/v2/theme/index.d.ts"
+    },
+    "./v2/theme/reset.styles": {
+      "default": "./dist/v2/theme/reset.styles.mjs",
+      "types": "./dist/v2/theme/reset.styles.d.ts"
+    },
+    "./v2/theme/style-funcs": {
+      "default": "./dist/v2/theme/style-funcs.mjs",
+      "types": "./dist/v2/theme/style-funcs.d.ts"
+    },
+    "./v2/theme/theme": {
+      "default": "./dist/v2/theme/theme.mjs",
+      "types": "./dist/v2/theme/theme.d.ts"
+    },
+    "./v2/types/current-user": {
+      "default": "./dist/v2/types/current-user.mjs",
+      "types": "./dist/v2/types/current-user.d.ts"
+    }
+  },
+  "name": "@pythnetwork/component-library",
+  "peerDependencies": {
+    "next": "catalog:",
+    "react": "catalog:"
+  },
+  "private": true,
+  "scripts": {
+    "build": "ts-duality --copyOtherFiles --noCjs",
+    "build:css-in-js": "ssjs --entrypoints ./src/v2/components/index.ts --outfile ./src/v2/v2-theme.css",
+    "build:css-in-js:watch": "pnpm build:css-in-js --watch",
+    "build:storybook": "storybook build",
+    "clean": "rm -rf ./dist",
+    "fix:lint:stylelint": "stylelint --fix 'src/**/*.scss'",
+    "start:dev": "ts-duality --copyOtherFiles --noCjs --watch",
+    "storybook": "storybook dev --port 4000 --no-open",
+    "test:lint:stylelint": "stylelint 'src/**/*.scss' --max-warnings 0",
+    "test:types": "tsc",
+    "test:unit": "test-unit"
+  },
+  "ts-duality": {
+    "extraExports": {
+      "./theme": "./dist/theme.scss",
+      "./themeV2": "./dist/v2/v2-theme.css"
+    }
+  },
+  "type": "module",
+  "version": "0.1.1"
 }

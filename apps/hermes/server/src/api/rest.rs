@@ -43,6 +43,7 @@ pub enum RestError {
     InvalidCCIPInput,
     PriceIdsNotFound { missing_ids: Vec<PriceIdentifier> },
     RpcConnectionError { message: String },
+    EndpointDeprecated { message: String },
 }
 
 impl IntoResponse for RestError {
@@ -76,12 +77,15 @@ impl IntoResponse for RestError {
 
                 (
                     StatusCode::NOT_FOUND,
-                    format!("Price ids not found: {}", missing_ids),
+                    format!("Price ids not found: {missing_ids}"),
                 )
                     .into_response()
             }
             RestError::RpcConnectionError { message } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, message).into_response()
+            }
+            RestError::EndpointDeprecated { message } => {
+                (StatusCode::BAD_REQUEST, message).into_response()
             }
         }
     }
@@ -126,7 +130,7 @@ mod tests {
         crate::state::{
             aggregate::{
                 AggregationEvent, PriceFeedsWithUpdateData, PublisherStakeCapsWithUpdateData,
-                ReadinessMetadata, RequestTime, TwapsWithUpdateData, Update,
+                ReadinessMetadata, RequestTime, Update,
             },
             benchmarks::BenchmarksState,
             cache::CacheState,
@@ -182,7 +186,7 @@ mod tests {
             unimplemented!("Not needed for this test")
         }
 
-        async fn store_update(&self, _update: Update) -> Result<()> {
+        async fn store_update(&self, _update: Update) -> Result<bool> {
             unimplemented!("Not needed for this test")
         }
 
@@ -197,14 +201,6 @@ mod tests {
         async fn get_latest_publisher_stake_caps_with_update_data(
             &self,
         ) -> Result<PublisherStakeCapsWithUpdateData> {
-            unimplemented!("Not needed for this test")
-        }
-        async fn get_twaps_with_update_data(
-            &self,
-            _price_ids: &[PriceIdentifier],
-            _window_seconds: u64,
-            _end_time: RequestTime,
-        ) -> Result<TwapsWithUpdateData> {
             unimplemented!("Not needed for this test")
         }
     }

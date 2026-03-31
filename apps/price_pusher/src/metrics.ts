@@ -1,7 +1,10 @@
-import { Registry, Counter, Gauge } from "prom-client";
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-misused-promises */
 import express from "express";
-import { Logger } from "pino";
-import { UpdateCondition } from "./price-config";
+import type { Logger } from "pino";
+import { Registry, Counter, Gauge } from "prom-client";
+
+import { UpdateCondition } from "./price-config.js";
 
 // Define the metrics we want to track
 export class PricePusherMetrics {
@@ -10,13 +13,15 @@ export class PricePusherMetrics {
   private logger: Logger;
 
   // Metrics for price feed updates
-  public lastPublishedTime: Gauge<string>;
-  public priceUpdateAttempts: Counter<string>;
-  public priceFeedsTotal: Gauge<string>;
-  public sourceTimestamp: Gauge<string>;
-  public configuredTimeDifference: Gauge<string>;
+  public lastPublishedTime: Gauge;
+  public priceUpdateAttempts: Counter;
+  public priceFeedsTotal: Gauge;
+  public sourceTimestamp: Gauge;
+  public configuredTimeDifference: Gauge;
+  public sourcePriceValue: Gauge;
+  public targetPriceValue: Gauge;
   // Wallet metrics
-  public walletBalance: Gauge<string>;
+  public walletBalance: Gauge;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -61,6 +66,20 @@ export class PricePusherMetrics {
       registers: [this.registry],
     });
 
+    this.sourcePriceValue = new Gauge({
+      name: "pyth_source_price",
+      help: "Latest price value from Pyth source",
+      labelNames: ["price_id", "alias"],
+      registers: [this.registry],
+    });
+
+    this.targetPriceValue = new Gauge({
+      name: "pyth_target_price",
+      help: "Latest price value from target chain",
+      labelNames: ["price_id", "alias"],
+      registers: [this.registry],
+    });
+
     // Wallet balance metric
     this.walletBalance = new Gauge({
       name: "pyth_wallet_balance",
@@ -70,7 +89,7 @@ export class PricePusherMetrics {
     });
 
     // Setup the metrics endpoint
-    this.server.get("/metrics", async (req, res) => {
+    this.server.get("/metrics", async (_, res) => {
       res.set("Content-Type", this.registry.contentType);
       res.end(await this.registry.metrics());
     });
@@ -87,7 +106,7 @@ export class PricePusherMetrics {
   public recordPriceUpdate(
     priceId: string,
     alias: string,
-    trigger: string = "yes",
+    trigger = "yes",
   ): void {
     this.priceUpdateAttempts.inc({
       price_id: priceId,
@@ -121,7 +140,7 @@ export class PricePusherMetrics {
   public recordPriceUpdateError(
     priceId: string,
     alias: string,
-    trigger: string = "yes",
+    trigger = "yes",
   ): void {
     this.priceUpdateAttempts.inc({
       price_id: priceId,
@@ -156,6 +175,27 @@ export class PricePusherMetrics {
       { price_id: priceId, alias },
       priceConfigTimeDifference,
     );
+  }
+
+  // Update price values
+  public updatePriceValues(
+    priceId: string,
+    alias: string,
+    sourcePrice: string | undefined,
+    targetPrice: string | undefined,
+  ): void {
+    if (sourcePrice !== undefined) {
+      this.sourcePriceValue.set(
+        { price_id: priceId, alias },
+        Number(sourcePrice),
+      );
+    }
+    if (targetPrice !== undefined) {
+      this.targetPriceValue.set(
+        { price_id: priceId, alias },
+        Number(targetPrice),
+      );
+    }
   }
 
   // Update wallet balance

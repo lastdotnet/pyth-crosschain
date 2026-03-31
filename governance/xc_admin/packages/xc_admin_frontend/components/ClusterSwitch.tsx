@@ -1,16 +1,21 @@
+/* eslint-disable @typescript-eslint/no-deprecated */
+/* eslint-disable @typescript-eslint/no-floating-promises */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Menu, Transition } from '@headlessui/react'
+import type { PythCluster } from '@pythnetwork/client'
 import { useRouter } from 'next/router'
 import { Fragment, useCallback, useContext, useEffect } from 'react'
+
 import { ClusterContext, DEFAULT_CLUSTER } from '../contexts/ClusterContext'
-import Arrow from '@images/icons/down.inline.svg'
-import { PythCluster } from '@pythnetwork/client'
+import Arrow from '../images/icons/down.inline.svg'
 
 const ClusterSwitch = ({ light }: { light?: boolean | null }) => {
   const router = useRouter()
 
   const { cluster, setCluster } = useContext(ClusterContext)
   const handleChange = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (event: any) => {
       if (event.target.value) {
         router.query.cluster = event.target.value
@@ -29,9 +34,12 @@ const ClusterSwitch = ({ light }: { light?: boolean | null }) => {
   )
 
   useEffect(() => {
-    router?.query?.cluster
-      ? setCluster(router.query.cluster as PythCluster)
-      : setCluster(DEFAULT_CLUSTER)
+    if (router?.query?.cluster) {
+      setCluster(router.query.cluster as PythCluster)
+      return
+    } else {
+      setCluster(DEFAULT_CLUSTER)
+    }
   }, [setCluster, router])
 
   const clusters = [
@@ -71,7 +79,7 @@ const ClusterSwitch = ({ light }: { light?: boolean | null }) => {
             }`}
           >
             <span className="mr-3">{cluster}</span>
-            <Arrow className={`${open && 'rotate-180'}`} />
+            <Arrow className={open && 'rotate-180'} />
           </Menu.Button>
           <Transition
             as={Fragment}

@@ -14,21 +14,23 @@ export * from "./chains";
 export * from "./deterministic_stake_accounts";
 export * from "./price_store";
 export { default as lazerIdl } from "./multisig_transaction/idl/lazer.json";
+export { default as integrityPoolIdl } from "./multisig_transaction/idl/integrity-pool.json";
+export { INTEGRITY_POOL_PROGRAM_ID } from "./multisig_transaction/AnchorMultisigInstruction";
 
 export {
   ProgramType,
   PROGRAM_TYPE_NAMES,
-  PriceRawConfig,
-  ProductRawConfig,
-  MappingRawConfig,
-  RawConfig,
-  DownloadablePriceAccount,
-  DownloadableProduct,
-  DownloadableConfig,
-  ProgramConfig,
-  ProgramInstructionAccounts,
-  InstructionAccountsTypeMap,
-  ValidationResult,
+  type PriceRawConfig,
+  type ProductRawConfig,
+  type MappingRawConfig,
+  type RawConfig,
+  type DownloadablePriceAccount,
+  type DownloadableProduct,
+  type DownloadableConfig,
+  type ProgramConfig,
+  type ProgramInstructionAccounts,
+  type InstructionAccountsTypeMap,
+  type ValidationResult,
 } from "./programs/types";
 export {
   getProgramAddress,

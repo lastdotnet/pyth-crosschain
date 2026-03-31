@@ -15,13 +15,18 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
+import { getPublishersWithRankings } from "../../get-publishers-with-rankings";
 import {
   getPublisherRankingHistory,
   getPublisherAverageScoreHistory,
-  getPublishers,
 } from "../../services/clickhouse";
 import { getPublisherCaps } from "../../services/hermes";
-import { ClusterToName, parseCluster, Cluster } from "../../services/pyth";
+import {
+  ClusterToName,
+  parseCluster,
+  Cluster,
+  CLUSTER_NAMES,
+} from "../../services/pyth";
 import { getPublisherPoolData } from "../../services/staking";
 import { Cards } from "../Cards";
 import { ChangePercent } from "../ChangePercent";
@@ -33,18 +38,19 @@ import {
   ExplainActive,
   ExplainInactive,
 } from "../Explanations";
+import { FormattedDate } from "../FormattedDate";
 import { FormattedNumber } from "../FormattedNumber";
 import { PublisherIcon } from "../PublisherIcon";
 import { PublisherKey } from "../PublisherKey";
 import { PublisherTag } from "../PublisherTag";
 import { getPriceFeeds } from "./get-price-feeds";
 import styles from "./layout.module.scss";
-import { FormattedDate } from "../FormattedDate";
 import { FormattedTokens } from "../FormattedTokens";
 import { SemicircleMeter } from "../SemicircleMeter";
 import { TabPanel, TabRoot, Tabs } from "../Tabs";
 import { TokenIcon } from "../TokenIcon";
 import { OisApyHistory } from "./ois-apy-history";
+import { PublisherConformanceReport } from "./publisher-conformance-report";
 
 type Props = {
   children: ReactNode;
@@ -61,46 +67,9 @@ export const PublisherLayout = async ({ children, params }: Props) => {
   if (parsedCluster === undefined) {
     notFound();
   } else {
-    const knownPublisher = lookup(key);
     return (
       <div className={styles.publisherLayout}>
-        <section className={styles.header}>
-          <div className={styles.breadcrumbRow}>
-            <Breadcrumbs
-              className={styles.breadcrumbs ?? ""}
-              label="Breadcrumbs"
-              items={[
-                { href: "/", label: "Home" },
-                { href: "/publishers", label: "Publishers" },
-                { label: <PublisherKey publisherKey={key} /> },
-              ]}
-            />
-          </div>
-          <PublisherTag
-            cluster={parsedCluster}
-            publisherKey={key}
-            {...(knownPublisher && {
-              name: knownPublisher.name,
-              icon: <PublisherIcon knownPublisher={knownPublisher} />,
-            })}
-          />
-          <Cards className={styles.stats ?? ""}>
-            <Suspense fallback={<RankingCardImpl isLoading />}>
-              <RankingCard cluster={parsedCluster} publisherKey={key} />
-            </Suspense>
-            <Suspense fallback={<ScoreCardImpl isLoading />}>
-              <ScoreCard cluster={parsedCluster} publisherKey={key} />
-            </Suspense>
-            <Suspense fallback={<ActiveFeedsCardImpl isLoading />}>
-              <ActiveFeedsCard cluster={parsedCluster} publisherKey={key} />
-            </Suspense>
-            {parsedCluster === Cluster.Pythnet && (
-              <Suspense fallback={<OisPoolCardImpl isLoading />}>
-                <OisPoolCard publisherKey={key} />
-              </Suspense>
-            )}
-          </Cards>
-        </section>
+        <PublisherHeader cluster={parsedCluster} publisherKey={key} />
         <TabRoot>
           <Tabs
             label="Price Feed Navigation"
@@ -132,6 +101,63 @@ export const PublisherLayout = async ({ children, params }: Props) => {
   }
 };
 
+const PublisherHeader = ({
+  cluster,
+  publisherKey,
+}: {
+  cluster: Cluster;
+  publisherKey: string;
+}) => {
+  const knownPublisher = lookup(publisherKey);
+
+  return (
+    <section className={styles.header}>
+      <div className={styles.breadcrumbRow}>
+        <Breadcrumbs
+          className={styles.breadcrumbs ?? ""}
+          label="Breadcrumbs"
+          items={[
+            { href: "/", label: "Home" },
+            { href: "/publishers", label: "Publishers" },
+            { label: <PublisherKey publisherKey={publisherKey} /> },
+          ]}
+        />
+      </div>
+      <div className={styles.titleRow}>
+        <PublisherTag
+          cluster={cluster}
+          publisherKey={publisherKey}
+          {...(knownPublisher && {
+            name: knownPublisher.name,
+            icon: <PublisherIcon knownPublisher={knownPublisher} />,
+          })}
+        />
+        <PublisherConformanceReport
+          publisherKey={publisherKey}
+          cluster={CLUSTER_NAMES[cluster]}
+        />
+      </div>
+
+      <Cards className={styles.stats ?? ""}>
+        <Suspense fallback={<RankingCardImpl isLoading />}>
+          <RankingCard cluster={cluster} publisherKey={publisherKey} />
+        </Suspense>
+        <Suspense fallback={<ScoreCardImpl isLoading />}>
+          <ScoreCard cluster={cluster} publisherKey={publisherKey} />
+        </Suspense>
+        <Suspense fallback={<ActiveFeedsCardImpl isLoading />}>
+          <ActiveFeedsCard cluster={cluster} publisherKey={publisherKey} />
+        </Suspense>
+        {cluster === Cluster.Pythnet && (
+          <Suspense fallback={<OisPoolCardImpl isLoading />}>
+            <OisPoolCard publisherKey={publisherKey} />
+          </Suspense>
+        )}
+      </Cards>
+    </section>
+  );
+};
+
 const NumFeeds = async ({
   cluster,
   publisherKey,
@@ -150,10 +176,10 @@ const RankingCard = async ({
   cluster: Cluster;
   publisherKey: string;
 }) => {
-  const rankingHistory = await getPublisherRankingHistory(
+  const rankingHistory = await getPublisherRankingHistory({
     cluster,
-    publisherKey,
-  );
+    key: publisherKey,
+  });
   return <RankingCardImpl rankingHistory={rankingHistory} />;
 };
 
@@ -234,10 +260,11 @@ const ScoreCard = async ({
   cluster: Cluster;
   publisherKey: string;
 }) => {
-  const averageScoreHistory = await getPublisherAverageScoreHistory(
+  const averageScoreHistory = await getPublisherAverageScoreHistory({
     cluster,
-    publisherKey,
-  );
+    key: publisherKey,
+  });
+
   return <ScoreCardImpl averageScoreHistory={averageScoreHistory} />;
 };
 
@@ -338,7 +365,7 @@ const ActiveFeedsCard = async ({
   publisherKey: string;
 }) => {
   const [publishers, priceFeeds] = await Promise.all([
-    getPublishers(cluster),
+    getPublishersWithRankings(cluster),
     getPriceFeeds(cluster, publisherKey),
   ]);
   const publisher = publishers.find(
@@ -364,8 +391,8 @@ type ActiveFeedsCardImplProps =
       isLoading?: false | undefined;
       cluster: Cluster;
       publisherKey: string;
-      activeFeeds: number;
-      inactiveFeeds: number;
+      activeFeeds?: number | undefined;
+      inactiveFeeds?: number | undefined;
       allFeeds: number;
     };
 
@@ -408,33 +435,27 @@ const ActiveFeedsCardImpl = (props: ActiveFeedsCardImplProps) => (
       )
     }
     miniStat1={
-      props.isLoading ? (
-        <Skeleton width={10} />
-      ) : (
-        <>
-          <FormattedNumber
-            maximumFractionDigits={1}
-            value={(100 * props.activeFeeds) / props.allFeeds}
-          />
-          %
-        </>
-      )
+      <RankingMiniStat
+        {...(props.isLoading
+          ? { isLoading: true }
+          : {
+              stat: props.activeFeeds,
+              allFeeds: props.allFeeds,
+            })}
+      />
     }
     miniStat2={
-      props.isLoading ? (
-        <Skeleton width={10} />
-      ) : (
-        <>
-          <FormattedNumber
-            maximumFractionDigits={1}
-            value={(100 * props.inactiveFeeds) / props.allFeeds}
-          />
-          %
-        </>
-      )
+      <RankingMiniStat
+        {...(props.isLoading
+          ? { isLoading: true }
+          : {
+              stat: props.inactiveFeeds,
+              allFeeds: props.allFeeds,
+            })}
+      />
     }
   >
-    {!props.isLoading && (
+    {!props.isLoading && props.activeFeeds !== undefined && (
       <Meter
         value={props.activeFeeds}
         maxValue={props.allFeeds}
@@ -443,6 +464,33 @@ const ActiveFeedsCardImpl = (props: ActiveFeedsCardImplProps) => (
     )}
   </StatCard>
 );
+
+const RankingMiniStat = (
+  props:
+    | { isLoading: true }
+    | {
+        isLoading?: false | undefined;
+        stat: number | undefined;
+        allFeeds: number;
+      },
+) => {
+  if (props.isLoading) {
+    return <Skeleton width={10} />;
+  } else if (props.stat === undefined) {
+    // eslint-disable-next-line unicorn/no-null
+    return null;
+  } else {
+    return (
+      <>
+        <FormattedNumber
+          maximumFractionDigits={1}
+          value={(100 * props.stat) / props.allFeeds}
+        />
+        %
+      </>
+    );
+  }
+};
 
 const OisPoolCard = async ({ publisherKey }: { publisherKey: string }) => {
   const [publisherPoolData, publisherCaps] = await Promise.all([

@@ -1,33 +1,30 @@
+/* eslint-disable no-console */
 import {
   AccountType,
-  PythCluster,
   getPythProgramKeyForCluster,
   parseBaseData,
 } from '@pythnetwork/client'
+import type { RawConfig } from '@pythnetwork/xc-admin-common'
+import { ProgramType, getConfig } from '@pythnetwork/xc-admin-common'
 import { Connection } from '@solana/web3.js'
 import { useContext, useEffect, useRef, useState } from 'react'
+
 import { ClusterContext } from '../contexts/ClusterContext'
 import { deriveWsUrl, pythClusterApiUrls } from '../utils/pythClusterApiUrl'
-import {
-  ProgramType,
-  getConfig,
-  RawConfig,
-  MappingRawConfig,
-  ProductRawConfig,
-  PriceRawConfig,
-} from '@pythnetwork/xc-admin-common'
 
-interface PythHookData {
+type PythHookData = {
   isLoading: boolean
   rawConfig: RawConfig
-  connection?: Connection
+  connection?: Connection | undefined
 }
 
 export const usePyth = (): PythHookData => {
   const connectionRef = useRef<Connection | undefined>(undefined)
   const { cluster } = useContext(ClusterContext)
   const [isLoading, setIsLoading] = useState(true)
-  const [rawConfig, setRawConfig] = useState<RawConfig>({ mappingAccounts: [] })
+  const [rawConfig, setRawConfig] = useState<RawConfig>({
+    mappingAccounts: [],
+  })
   const [urlsIndex, setUrlsIndex] = useState(0)
 
   useEffect(() => {
@@ -41,17 +38,17 @@ export const usePyth = (): PythHookData => {
   useEffect(() => {
     let cancelled = false
     const urls = pythClusterApiUrls(cluster)
-    const connection = new Connection(urls[urlsIndex], {
+    const connection = new Connection(urls[urlsIndex] ?? '', {
       commitment: 'confirmed',
-      wsEndpoint: deriveWsUrl(urls[urlsIndex]),
+      wsEndpoint: deriveWsUrl(urls[urlsIndex] ?? ''),
     })
 
     connectionRef.current = connection
-    ;(async () => {
+    const result = (async () => {
       try {
         const allPythAccounts = [
           ...(await connection.getProgramAccounts(
-            getPythProgramKeyForCluster(cluster as PythCluster)
+            getPythProgramKeyForCluster(cluster)
           )),
         ]
         if (cancelled) return
@@ -59,7 +56,7 @@ export const usePyth = (): PythHookData => {
         // Use the functional approach to parse the accounts
         const parsedConfig = getConfig[ProgramType.PYTH_CORE]({
           accounts: allPythAccounts,
-          cluster: cluster as PythCluster,
+          cluster: cluster,
         })
 
         // Get all account pubkeys from the parsed config
@@ -85,7 +82,7 @@ export const usePyth = (): PythHookData => {
 
         if (unprocessedAccounts.length > 0) {
           console.warn(
-            `${unprocessedAccounts.length} accounts were not processed:`,
+            `${unprocessedAccounts.length.toString()} accounts were not processed:`,
             unprocessedAccounts.map((acc) => ({
               pubkey: acc.pubkey.toBase58(),
               type: parseBaseData(acc.account.data)?.type,
@@ -93,9 +90,9 @@ export const usePyth = (): PythHookData => {
           )
         }
 
-        setRawConfig(parsedConfig as RawConfig)
+        setRawConfig(parsedConfig)
         setIsLoading(false)
-      } catch (e) {
+      } catch {
         if (cancelled) return
         if (urlsIndex === urls.length - 1) {
           setIsLoading(false)
@@ -105,6 +102,8 @@ export const usePyth = (): PythHookData => {
         }
       }
     })()
+
+    result.catch(console.error)
 
     return () => {
       cancelled = true
@@ -119,4 +118,10 @@ export const usePyth = (): PythHookData => {
 }
 
 // Re-export the types for compatibility
-export type { RawConfig, MappingRawConfig, ProductRawConfig, PriceRawConfig }
+
+export {
+  type RawConfig,
+  type MappingRawConfig,
+  type ProductRawConfig,
+  type PriceRawConfig,
+} from '@pythnetwork/xc-admin-common'

@@ -5,6 +5,22 @@ Pyth protocols.
 
 Within this monorepo you will find the following subprojects:
 
+## Table of Contents
+
+- [Target Chains](#target-chains)
+- [Hermes](#hermes)
+- [Fortuna](#fortuna)
+- [Pyth Lazer Pusher](#pyth-lazer-pusher)
+- [Local Development](#local-development)
+  - [Setup](#setup)
+  - [Pull requests](#pull-requests)
+  - [Releases](#releases)
+  - [Typescript Monorepo](#typescript-monorepo)
+    - [Setting up](#setting-up)
+    - [Common tasks](#common-tasks)
+    - [Building a new web app, JS / TS library or CLI tool](#building-a-new-web-app-js--ts-library-or-cli-tool)
+- [Audit / Feature Status](#audit--feature-status)
+
 ## Target Chains
 
 > [target_chains](./target_chains/)
@@ -35,13 +51,20 @@ and [examples](https://github.com/pyth-network/pyth-examples/tree/main/price_fee
 
 Fortuna is an off-chain service which can be used by [Entropy](https://pyth.network/entropy) providers.
 
+## Pyth Lazer Pusher
+
+> [pyth-lazer-pusher](./apps/pyth-lazer-pusher/)
+
+Price feed pushers that deliver Pyth Lazer data to external systems. Currently supports pushing to Bulk Trade validators.
+
 ## Local Development
 
 ### Setup
 
 Please install the following tools in order to work in this repository:
 
-- [NVM](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) to manage your node version, then run `nvm use 20` to ensure you are using node version 20.
+- [NVM](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) to manage your node version, then run `nvm use 22` to ensure you are using node version 22.
+  - Optionally, you can also use [mise](https://mise.jdx.dev/). If you install `mise`, you can run all of your commands like the following: `mise x -- pnpm <SOME_COMMAND>`, which will ensure you are running your commands while using the correct tool versions for this repository.
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) in order to use `forge` for Ethereum contract development
 - [Solana CLI](https://solana.com/docs/intro/installation) for working with Solana programs.
   - After installing, please run `solana keygen new` to generate a local private key.
@@ -68,6 +91,7 @@ The general process for creating a new release is:
 2. Submit a PR with the changes and merge them in to main.
 3. Create a new release on github. Configure the release to create a new tag when published. Set the tag name and version for the component you wish to release -- see the [Releases](https://github.com/pyth-network/pyth-crosschain/releases) page to identify the relevant tag.
 4. Publish the release. This step will automatically trigger a Github Action to build the package and release it. This step will e.g., publish packages to NPM, or build and push docker images.
+   - Note that when publishing a public package, you should prune the auto-generated Github release notes to only include changes relevant to the release. Otherwise, the changelog will include commits from unrelated projects in the monorepo since the previous release.
 
 Note that all javascript packages are released together using a tag of the form `pyth-js-v<number>`. (The `number` is arbitrary.)
 If you have a javascript package that shouldn't be published, simply add `"private": "true"` to the `package.json` file
@@ -118,51 +142,16 @@ after `--`, for instance you could run `pnpm test -- --concurrency 2`.
 - `pnpm turbo start:prod`: Run production builds and start production mode
   servers in parallel.
 
-#### Building a new package
+#### Building a new web app, JS / TS library or CLI tool
 
-New packages should be configured with a few requirements in mind:
+To quickly get started, from the root of this repo, you can run the following:
 
-1. You need to make sure `package.json` scripts are named such that that
-   turborepo will hook into them at the expected times.
+1. `pnpm create-pyth-package`
+2. Answer the prompts
+3. Once the script is done, you will have your new webb app, library or CLI tool bootstrapped with all the current best practices.
 
-   - See [turbo.json](./turbo.json) to see the base configuration and ensure you
-     use script names that match the tasks that turborepo is configured to run.
-   - You don't need to define scripts for all the tasks that are in the root
-     `turbo.json` config, just define the ones that make sense for your project.
-   - You shouldn't define scripts for tasks that just trigger other tasks;
-     instead configure turborepo dependencies to trigger the tasks. This will
-     allow turborepo to cache and parallelize things more effectively.
-   - In general, `build`, `fix`, and `test` are the main turborepo task graph
-     entry points, and any sub-tasks that apply to your package should be
-     configured as dependencies somewhere in the graph rooted at one of those.
-   - If you need sub-tasks or a task configuration that only apply to your or a
-     small few packages, add a package-scoped `turbo.json`, see [the one in the
-     insights app](./apps/insights/turbo.json) as an example.
-
-2. Make sure to configure the tools you need and hook up the relevant checks to
-   turborepo via the `test` root task so they run on CI. The most common tools
-   (eslint, prettier, jest, and typescript) are trivial to configure correctly
-   using shared configs, see the relevant config files [in the insights
-   app](./apps/insights) as a starting point.
-
-3. If you are writing a package that will be published:
-
-   - Make sure you are dual-exporting cjs and esm correctly, see [how the lazer
-     sdk package builds](./lazer/sdk/js/package.json) (in particular look at the
-     `build:cjs` and `build:esm` tasks) for an example for how to do this
-
-   - Ensure you have properly configured [subpath
-     exports](https://nodejs.org/api/packages.html#subpath-exports) to reference
-     the esm and cjs outputs so that your package can be consumed correctly in
-     both environments. Again, see [the lazer sdk](./lazer/sdk/js/package.json)
-     as an example for doing this correctly.
-
-   - Ensure you have set a `main` and `types` property on your `package.json`
-     pointing to your cjs entrypoint for use in older javascript environments.
-
-   - Ensure you configure the `files` property on your `package.json` to include
-     all output files and to exclude source files & tooling configuration. This
-     will result in smaller package sizes.
+If you'd like to read more about the best practices, checkout this best practices doc:
+[🔗 Creating a new JavaScript / TypeScript Package](./doc/js-code-guidelines.md)
 
 ## Audit / Feature Status
 

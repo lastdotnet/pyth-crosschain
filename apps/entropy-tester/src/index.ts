@@ -2,17 +2,21 @@ import fs from "node:fs/promises";
 
 import type { PrivateKey } from "@pythnetwork/contract-manager/core/base";
 import { toPrivateKey } from "@pythnetwork/contract-manager/core/base";
+import { EvmChain } from "@pythnetwork/contract-manager/core/chains";
 import { EvmEntropyContract } from "@pythnetwork/contract-manager/core/contracts/evm";
-import { DefaultStore } from "@pythnetwork/contract-manager/node/store";
+import { DefaultStore } from "@pythnetwork/contract-manager/node/utils/store";
 import type { Logger } from "pino";
 import { pino } from "pino";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { z } from "zod";
 
+const DEFAULT_RETRIES = 3;
+
 type LoadedConfig = {
   contract: EvmEntropyContract;
   interval: number;
+  retries: number;
 };
 
 function timeToSeconds(timeStr: string): number {
@@ -44,6 +48,8 @@ async function loadConfig(configPath: string): Promise<LoadedConfig[]> {
     z.strictObject({
       "chain-id": z.string(),
       interval: z.string(),
+      "rpc-endpoint": z.string().optional(),
+      retries: z.number().default(DEFAULT_RETRIES),
     }),
   );
   const configContent = (await import(configPath, {
@@ -66,7 +72,17 @@ async function loadConfig(configPath: string): Promise<LoadedConfig[]> {
         `Multiple contracts found for chain ${config["chain-id"]}, check contract manager store.`,
       );
     }
-    return { contract: firstContract, interval };
+    if (config["rpc-endpoint"]) {
+      const evmChain = firstContract.chain;
+      firstContract.chain = new EvmChain(
+        evmChain.getId(),
+        evmChain.isMainnet(),
+        evmChain.getNativeToken(),
+        config["rpc-endpoint"],
+        evmChain.networkId,
+      );
+    }
+    return { contract: firstContract, interval, retries: config.retries };
   });
   return loadedConfigs;
 }
@@ -176,20 +192,63 @@ export const main = function () {
           privateKeyFileContent.replace("0x", "").trimEnd(),
         );
         logger.info("Running");
-        const promises = configs.map(async ({ contract, interval }) => {
-          const child = logger.child({ chain: contract.chain.getId() });
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          while (true) {
-            try {
-              await testLatency(contract, privateKey, child);
-            } catch (error) {
-              child.error(error, "Error testing latency");
+        const promises = configs.map(
+          async ({ contract, interval, retries }) => {
+            const child = logger.child({ chain: contract.chain.getId() });
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            while (true) {
+              let lastError: Error | undefined;
+              let success = false;
+
+              for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                  await Promise.race([
+                    testLatency(contract, privateKey, child),
+                    new Promise((_, reject) =>
+                      setTimeout(() => {
+                        reject(
+                          new Error(
+                            "Timeout: 120s passed but testLatency function was not resolved",
+                          ),
+                        );
+                      }, 120_000),
+                    ),
+                  ]);
+                  success = true;
+                  break;
+                } catch (error) {
+                  lastError = error as Error;
+                  child.warn(
+                    { attempt, maxRetries: retries, error: error },
+                    `Attempt ${attempt.toString()}/${retries.toString()} failed, ${attempt < retries ? "retrying..." : "all retries exhausted"}`,
+                  );
+
+                  if (attempt < retries) {
+                    // Wait a bit before retrying (exponential backoff, max 10s)
+                    const backoffDelay = Math.min(
+                      2000 * Math.pow(2, attempt - 1),
+                      10_000,
+                    );
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, backoffDelay),
+                    );
+                  }
+                }
+              }
+
+              if (!success && lastError) {
+                child.error(
+                  { error: lastError, retriesExhausted: retries },
+                  "All retries exhausted, callback was not called.",
+                );
+              }
+
+              await new Promise((resolve) =>
+                setTimeout(resolve, interval * 1000),
+              );
             }
-            await new Promise((resolve) =>
-              setTimeout(resolve, interval * 1000),
-            );
-          }
-        });
+          },
+        );
         await Promise.all(promises);
       },
     )

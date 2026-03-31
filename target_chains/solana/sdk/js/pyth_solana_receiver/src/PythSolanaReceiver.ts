@@ -1,19 +1,30 @@
-import { AnchorProvider, IdlAccounts, Program } from "@coral-xyz/anchor";
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable tsdoc/syntax */
+
+// eslint-disable-next-line unicorn/prefer-node-protocol
+import { Buffer as IsomorphicBuffer } from "buffer";
+
+import type { IdlAccounts } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
+import {
+  parseAccumulatorUpdateData,
+  parsePriceFeedMessage,
+} from "@pythnetwork/price-service-sdk";
+import type {
+  InstructionWithEphemeralSigners,
+  PriorityFeeConfig,
+} from "@pythnetwork/solana-utils";
+import { TransactionBuilder } from "@pythnetwork/solana-utils";
+import type { Signer } from "@solana/web3.js";
 import {
   AddressLookupTableAccount,
   Connection,
-  Signer,
   Transaction,
   VersionedTransaction,
+  PublicKey,
+  Keypair,
 } from "@solana/web3.js";
-import {
-  PythSolanaReceiver as PythSolanaReceiverProgram,
-  IDL as Idl,
-} from "./idl/pyth_solana_receiver";
-import {
-  WormholeCoreBridgeSolana,
-  IDL as WormholeCoreBridgeSolanaIdl,
-} from "./idl/wormhole_core_bridge_solana";
+
 import {
   DEFAULT_PUSH_ORACLE_PROGRAM_ID,
   DEFAULT_RECEIVER_PROGRAM_ID,
@@ -23,41 +34,27 @@ import {
   getRandomTreasuryId,
   getTreasuryPda,
 } from "./address";
-import { PublicKey, Keypair } from "@solana/web3.js";
 import {
-  parseAccumulatorUpdateData,
-  parsePriceFeedMessage,
-  parseTwapMessage,
-} from "@pythnetwork/price-service-sdk";
-import {
-  POST_TWAP_UPDATE_COMPUTE_BUDGET,
   POST_UPDATE_ATOMIC_COMPUTE_BUDGET,
   POST_UPDATE_COMPUTE_BUDGET,
   UPDATE_PRICE_FEED_COMPUTE_BUDGET,
 } from "./compute_budget";
-import { Wallet } from "@coral-xyz/anchor";
+import type { PythPushOracle } from "./idl/pyth_push_oracle";
+import { IDL as PythPushOracleIdl } from "./idl/pyth_push_oracle";
+import type { PythSolanaReceiver as PythSolanaReceiverProgram } from "./idl/pyth_solana_receiver";
+import { IDL as Idl } from "./idl/pyth_solana_receiver";
+import type { WormholeCoreBridgeSolana } from "./idl/wormhole_core_bridge_solana";
+import { IDL as WormholeCoreBridgeSolanaIdl } from "./idl/wormhole_core_bridge_solana";
 import {
   buildCloseEncodedVaaInstruction,
   buildPostEncodedVaaInstructions,
-  buildPostEncodedVaasForTwapInstructions,
   findEncodedVaaAccountsByWriteAuthority,
   getGuardianSetIndex,
   trimSignatures,
 } from "./vaa";
-import {
-  TransactionBuilder,
-  InstructionWithEphemeralSigners,
-  PriorityFeeConfig,
-} from "@pythnetwork/solana-utils";
-import {
-  PythPushOracle,
-  IDL as PythPushOracleIdl,
-} from "./idl/pyth_push_oracle";
 
 export type PriceUpdateAccount =
   IdlAccounts<PythSolanaReceiverProgram>["priceUpdateV2"];
-export type TwapUpdateAccount =
-  IdlAccounts<PythSolanaReceiverProgram>["twapUpdate"];
 /**
  * Configuration for the PythTransactionBuilder
  * @property closeUpdateAccounts (default: true) if true, the builder will add instructions to close the price update accounts and the encoded vaa accounts to recover the rent
@@ -106,7 +103,6 @@ export class PythTransactionBuilder extends TransactionBuilder {
   readonly pythSolanaReceiver: PythSolanaReceiver;
   readonly closeInstructions: InstructionWithEphemeralSigners[];
   readonly priceFeedIdToPriceUpdateAccount: Record<string, PublicKey>;
-  readonly priceFeedIdToTwapUpdateAccount: Record<string, PublicKey>;
   readonly closeUpdateAccounts: boolean;
 
   constructor(
@@ -122,7 +118,6 @@ export class PythTransactionBuilder extends TransactionBuilder {
     this.pythSolanaReceiver = pythSolanaReceiver;
     this.closeInstructions = [];
     this.priceFeedIdToPriceUpdateAccount = {};
-    this.priceFeedIdToTwapUpdateAccount = {};
     this.closeUpdateAccounts = config.closeUpdateAccounts ?? true;
   }
 
@@ -205,43 +200,6 @@ export class PythTransactionBuilder extends TransactionBuilder {
   }
 
   /**
-   * Add instructions to post TWAP updates to the builder.
-   * Use this function to post fully verified TWAP updates from the present or from the past for your program to consume.
-   *
-   * @param twapUpdateDataArray the output of the `@pythnetwork/hermes-client`'s `getLatestTwaps`. This is an array of verifiable price updates.
-   *
-   * @example
-   * ```typescript
-   * // Get the price feed ids from https://pyth.network/developers/price-feed-ids#pyth-evm-stable
-   * const twapUpdateData = await hermesClient.getLatestTwaps([
-   *    SOL_PRICE_FEED_ID,
-   *    ETH_PRICE_FEED_ID,
-   * ]);
-   *
-   * const transactionBuilder = pythSolanaReceiver.newTransactionBuilder({});
-   * await transactionBuilder.addPostTwapUpdates(priceUpdateData);
-   * console.log("The SOL/USD price update will get posted to:", transactionBuilder.getTwapUpdateAccount(SOL_PRICE_FEED_ID).toBase58())
-   * await transactionBuilder.addTwapConsumerInstructions(...)
-   * ```
-   */
-  async addPostTwapUpdates(twapUpdateDataArray: string[]) {
-    const {
-      postInstructions,
-      priceFeedIdToTwapUpdateAccount,
-      closeInstructions,
-    } =
-      await this.pythSolanaReceiver.buildPostTwapUpdateInstructions(
-        twapUpdateDataArray,
-      );
-    this.closeInstructions.push(...closeInstructions);
-    Object.assign(
-      this.priceFeedIdToTwapUpdateAccount,
-      priceFeedIdToTwapUpdateAccount,
-    );
-    this.addInstructions(postInstructions);
-  }
-
-  /**
    * Add instructions to update price feed accounts to the builder.
    * Price feed accounts are fixed accounts per price feed id that can only be updated with a more recent price.
    *
@@ -319,46 +277,6 @@ export class PythTransactionBuilder extends TransactionBuilder {
     );
   }
 
-  /**
-   * Add instructions that consume TWAP updates to the builder.
-   *
-   * @param getInstructions a function that given a mapping of price feed IDs to TWAP update accounts, generates a series of instructions. TWAP updates get posted to ephemeral accounts and this function allows the user to indicate which accounts in their instruction need to be "replaced" with each price update account.
-   * If multiple TWAP updates for the same price feed ID are posted with the same builder, the account corresponding to the last update to get posted will be used.
-   *
-   * @example
-   * ```typescript
-   * ...
-   * await transactionBuilder.addPostTwapUpdates(twapUpdateData);
-   * await transactionBuilder.addTwapConsumerInstructions(
-   *   async (
-   *     getTwapUpdateAccount: ( priceFeedId: string) => PublicKey
-   *   ): Promise<InstructionWithEphemeralSigners[]> => {
-   *     return [
-   *       {
-   *         instruction: await myFirstPythApp.methods
-   *           .consume()
-   *           .accounts({
-   *              solTwapUpdate: getTwapUpdateAccount(SOL_PRICE_FEED_ID),
-   *              ethTwapUpdate: getTwapUpdateAccount(ETH_PRICE_FEED_ID),
-   *           })
-   *           .instruction(),
-   *         signers: [],
-   *       },
-   *     ];
-   *   }
-   * );
-   * ```
-   */
-  async addTwapConsumerInstructions(
-    getInstructions: (
-      getTwapUpdateAccount: (priceFeedId: string) => PublicKey,
-    ) => Promise<InstructionWithEphemeralSigners[]>,
-  ) {
-    this.addInstructions(
-      await getInstructions(this.getTwapUpdateAccount.bind(this)),
-    );
-  }
-
   /** Add instructions to close encoded VAA accounts from previous actions.
    * If you have previously used the PythTransactionBuilder with closeUpdateAccounts set to false or if you posted encoded VAAs but the transaction to close them did not land on-chain, your wallet might own many encoded VAA accounts.
    * The rent cost for these accounts is 0.008 SOL per encoded VAA account. You can recover this rent calling this function when building a set of transactions.
@@ -374,7 +292,7 @@ export class PythTransactionBuilder extends TransactionBuilder {
   /**
    * Returns all the added instructions batched into versioned transactions, plus for each transaction the ephemeral signers that need to sign it
    */
-  async buildVersionedTransactions(
+  override async buildVersionedTransactions(
     args: PriorityFeeConfig,
   ): Promise<{ tx: VersionedTransaction; signers: Signer[] }[]> {
     if (this.closeUpdateAccounts) {
@@ -386,7 +304,7 @@ export class PythTransactionBuilder extends TransactionBuilder {
   /**
    * Returns all the added instructions batched into transactions, plus for each transaction the ephemeral signers that need to sign it
    */
-  buildLegacyTransactions(
+  override buildLegacyTransactions(
     args: PriorityFeeConfig,
   ): { tx: Transaction; signers: Signer[] }[] {
     if (this.closeUpdateAccounts) {
@@ -409,20 +327,6 @@ export class PythTransactionBuilder extends TransactionBuilder {
     }
     return priceUpdateAccount;
   }
-
-  /**
-   * This method is used to retrieve the address of the TWAP update account where the TWAP update for a given price feed ID will be posted.
-   * If multiple updates for the same price feed ID will be posted with the same builder, the address of the account corresponding to the last update to get posted will be returned.
-   * */
-  getTwapUpdateAccount(priceFeedId: string): PublicKey {
-    const twapUpdateAccount = this.priceFeedIdToTwapUpdateAccount[priceFeedId];
-    if (!twapUpdateAccount) {
-      throw new Error(
-        `No TWAP update account found for the price feed ID ${priceFeedId}. Make sure to call addPostTwapUpdates before calling this function.`,
-      );
-    }
-    return twapUpdateAccount;
-  }
 }
 
 /**
@@ -439,14 +343,14 @@ export class PythSolanaReceiver {
   readonly receiver: Program<PythSolanaReceiverProgram>;
   readonly wormhole: Program<WormholeCoreBridgeSolana>;
   readonly pushOracle: Program<PythPushOracle>;
-  readonly treasuryId?: number;
+  readonly treasuryId?: number | undefined;
   constructor({
     connection,
     wallet,
     wormholeProgramId = DEFAULT_WORMHOLE_PROGRAM_ID,
     receiverProgramId = DEFAULT_RECEIVER_PROGRAM_ID,
     pushOracleProgramId = DEFAULT_PUSH_ORACLE_PROGRAM_ID,
-    treasuryId = undefined,
+    treasuryId,
   }: {
     connection: Connection;
     wallet: Wallet;
@@ -465,20 +369,20 @@ export class PythSolanaReceiver {
     this.connection = connection;
     this.wallet = wallet;
     this.provider = new AnchorProvider(this.connection, this.wallet, {
-      commitment: connection.commitment,
+      commitment: connection.commitment!,
     });
     this.receiver = new Program<PythSolanaReceiverProgram>(
-      Idl as PythSolanaReceiverProgram,
+      Idl,
       receiverProgramId,
       this.provider,
     );
     this.wormhole = new Program<WormholeCoreBridgeSolana>(
-      WormholeCoreBridgeSolanaIdl as WormholeCoreBridgeSolana,
+      WormholeCoreBridgeSolanaIdl,
       wormholeProgramId,
       this.provider,
     );
     this.pushOracle = new Program<PythPushOracle>(
-      PythPushOracleIdl as PythPushOracle,
+      PythPushOracleIdl,
       pushOracleProgramId,
       this.provider,
     );
@@ -521,7 +425,7 @@ export class PythSolanaReceiver {
 
     for (const priceUpdateData of priceUpdateDataArray) {
       const accumulatorUpdateData = parseAccumulatorUpdateData(
-        Buffer.from(priceUpdateData, "base64"),
+        IsomorphicBuffer.from(priceUpdateData, "base64"),
       );
       const guardianSetIndex = getGuardianSetIndex(accumulatorUpdateData.vaa);
       const trimmedVaa = trimSignatures(accumulatorUpdateData.vaa);
@@ -589,7 +493,7 @@ export class PythSolanaReceiver {
 
     for (const priceUpdateData of priceUpdateDataArray) {
       const accumulatorUpdateData = parseAccumulatorUpdateData(
-        Buffer.from(priceUpdateData, "base64"),
+        IsomorphicBuffer.from(priceUpdateData, "base64"),
       );
 
       const {
@@ -638,98 +542,6 @@ export class PythSolanaReceiver {
   }
 
   /**
-   * Build a series of helper instructions that post TWAP updates to the Pyth Solana Receiver program and another series to close the encoded vaa accounts and the TWAP update accounts.
-   *
-   * @param twapUpdateDataArray the output of the `@pythnetwork/price-service-client`'s `PriceServiceConnection.getLatestTwaps`. This is an array of verifiable price updates.
-   * @returns `postInstructions`: the instructions to post the TWAP updates, these should be called before consuming the price updates
-   * @returns `priceFeedIdToTwapUpdateAccount`: this is a map of price feed IDs to Solana address. Given a price feed ID, you can use this map to find the account where `postInstructions` will post the TWAP update.
-   * @returns `closeInstructions`: the instructions to close the TWAP update accounts, these should be called after consuming the TWAP updates
-   */
-  async buildPostTwapUpdateInstructions(
-    twapUpdateDataArray: string[],
-  ): Promise<{
-    postInstructions: InstructionWithEphemeralSigners[];
-    priceFeedIdToTwapUpdateAccount: Record<string, PublicKey>;
-    closeInstructions: InstructionWithEphemeralSigners[];
-  }> {
-    const postInstructions: InstructionWithEphemeralSigners[] = [];
-    const priceFeedIdToTwapUpdateAccount: Record<string, PublicKey> = {};
-    const closeInstructions: InstructionWithEphemeralSigners[] = [];
-
-    const treasuryId = this.treasuryId ?? getRandomTreasuryId();
-
-    if (twapUpdateDataArray.length !== 2) {
-      throw new Error(
-        "twapUpdateDataArray must contain exactly two updates (start and end)",
-      );
-    }
-
-    const [startUpdateData, endUpdateData] = twapUpdateDataArray.map((data) =>
-      parseAccumulatorUpdateData(Buffer.from(data, "base64")),
-    );
-
-    // Validate that the start and end updates contain the same number of price feeds
-    if (startUpdateData.updates.length !== endUpdateData.updates.length) {
-      throw new Error(
-        "Start and end updates must contain the same number of price feeds",
-      );
-    }
-
-    // Post encoded VAAs
-    const {
-      postInstructions: buildVaasInstructions,
-      closeInstructions: closeVaasInstructions,
-      startEncodedVaaAddress,
-      endEncodedVaaAddress,
-    } = await buildPostEncodedVaasForTwapInstructions(
-      this.wormhole,
-      startUpdateData,
-      endUpdateData,
-    );
-    postInstructions.push(...buildVaasInstructions);
-    closeInstructions.push(...closeVaasInstructions);
-
-    // Post a TWAP update to the receiver contract for each price feed
-    for (let i = 0; i < startUpdateData.updates.length; i++) {
-      const startUpdate = startUpdateData.updates[i];
-      const endUpdate = endUpdateData.updates[i];
-
-      const twapUpdateKeypair = new Keypair();
-      postInstructions.push({
-        instruction: await this.receiver.methods
-          .postTwapUpdate({
-            startMerklePriceUpdate: startUpdate,
-            endMerklePriceUpdate: endUpdate,
-            treasuryId,
-          })
-          .accounts({
-            startEncodedVaa: startEncodedVaaAddress,
-            endEncodedVaa: endEncodedVaaAddress,
-            twapUpdateAccount: twapUpdateKeypair.publicKey,
-            treasury: getTreasuryPda(treasuryId, this.receiver.programId),
-            config: getConfigPda(this.receiver.programId),
-          })
-          .instruction(),
-        signers: [twapUpdateKeypair],
-        computeUnits: POST_TWAP_UPDATE_COMPUTE_BUDGET,
-      });
-
-      priceFeedIdToTwapUpdateAccount[
-        "0x" + parseTwapMessage(startUpdate.message).feedId.toString("hex")
-      ] = twapUpdateKeypair.publicKey;
-      closeInstructions.push(
-        await this.buildCloseTwapUpdateInstruction(twapUpdateKeypair.publicKey),
-      );
-    }
-
-    return {
-      postInstructions,
-      priceFeedIdToTwapUpdateAccount,
-      closeInstructions,
-    };
-  }
-
-  /**
    * Build a series of helper instructions that update one or many price feed accounts and another series to close the encoded vaa accounts used to update the price feed accounts.
    *
    * @param priceUpdateDataArray the output of the `@pythnetwork/price-service-client`'s `PriceServiceConnection.getLatestVaas`. This is an array of verifiable price updates.
@@ -754,7 +566,7 @@ export class PythSolanaReceiver {
 
     for (const priceUpdateData of priceUpdateDataArray) {
       const accumulatorUpdateData = parseAccumulatorUpdateData(
-        Buffer.from(priceUpdateData, "base64"),
+        IsomorphicBuffer.from(priceUpdateData, "base64"),
       );
 
       const {
@@ -775,7 +587,7 @@ export class PythSolanaReceiver {
                 treasuryId,
               },
               shardId,
-              Array.from(feedId),
+              [...feedId],
             )
             .accounts({
               pythSolanaReceiver: this.receiver.programId,
@@ -852,19 +664,6 @@ export class PythSolanaReceiver {
     const instruction = await this.receiver.methods
       .reclaimRent()
       .accounts({ priceUpdateAccount })
-      .instruction();
-    return { instruction, signers: [] };
-  }
-
-  /**
-   * Build an instruction to close a TWAP update account, recovering the rent.
-   */
-  async buildCloseTwapUpdateInstruction(
-    twapUpdateAccount: PublicKey,
-  ): Promise<InstructionWithEphemeralSigners> {
-    const instruction = await this.receiver.methods
-      .reclaimTwapRent()
-      .accounts({ twapUpdateAccount })
       .instruction();
     return { instruction, signers: [] };
   }
@@ -957,17 +756,15 @@ export function getPriceFeedAccountForProgram(
   pushOracleProgramId?: PublicKey,
 ): PublicKey {
   if (typeof priceFeedId == "string") {
-    if (priceFeedId.startsWith("0x")) {
-      priceFeedId = Buffer.from(priceFeedId.slice(2), "hex");
-    } else {
-      priceFeedId = Buffer.from(priceFeedId, "hex");
-    }
+    priceFeedId = priceFeedId.startsWith("0x")
+      ? IsomorphicBuffer.from(priceFeedId.slice(2), "hex")
+      : IsomorphicBuffer.from(priceFeedId, "hex");
   }
 
   if (priceFeedId.length != 32) {
     throw new Error("Feed ID should be 32 bytes long");
   }
-  const shardBuffer = Buffer.alloc(2);
+  const shardBuffer = IsomorphicBuffer.alloc(2);
   shardBuffer.writeUint16LE(shardId, 0);
 
   return PublicKey.findProgramAddressSync(

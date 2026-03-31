@@ -1,6 +1,8 @@
-import { ChainId, ChainName, toChainId, toChainName } from "../chains";
 import * as BufferLayout from "@solana/buffer-layout";
 import { PACKET_DATA_SIZE } from "@solana/web3.js";
+import type { ChainId, ChainName } from "../chains";
+import { toChainId, toChainName } from "../chains";
+import { safeBufferConcat } from "../utils/buffer";
 
 /** Each of the actions that can be directed to the Executor Module */
 export const ExecutorAction = {
@@ -8,21 +10,26 @@ export const ExecutorAction = {
 } as const;
 
 export const TargetAction = {
-  UpgradeContract: 0,
   AuthorizeGovernanceDataSourceTransfer: 1,
+  RequestGovernanceDataSourceTransfer: 5,
   SetDataSources: 2,
   SetFee: 3,
-  SetValidPeriod: 4,
-  RequestGovernanceDataSourceTransfer: 5,
-  SetWormholeAddress: 6,
   SetFeeInToken: 7,
   SetTransactionFee: 8,
+  SetValidPeriod: 4,
+  SetWormholeAddress: 6,
+  UpgradeContract: 0,
   WithdrawFee: 9,
 } as const;
 
 export const EvmExecutorAction = {
   Execute: 0,
 } as const;
+
+export const LazerAction = {
+  UpdateTrustedSigner: 1,
+  UpgradeSuiLazerContract: 0,
+};
 
 /** Helper to get the ActionName from a (moduleId, actionId) tuple*/
 export function toActionName(
@@ -58,6 +65,13 @@ export function toActionName(
     deserialized.actionId == 0
   ) {
     return "Execute";
+  } else if (deserialized.moduleId == MODULE_LAZER) {
+    switch (deserialized.actionId) {
+      case 0:
+        return "UpgradeSuiLazerContract";
+      case 1:
+        return "UpdateTrustedSigner";
+    }
   }
   return undefined;
 }
@@ -65,7 +79,8 @@ export function toActionName(
 export declare type ActionName =
   | keyof typeof ExecutorAction
   | keyof typeof TargetAction
-  | keyof typeof EvmExecutorAction;
+  | keyof typeof EvmExecutorAction
+  | keyof typeof LazerAction;
 
 /** Governance header that should be in every Pyth crosschain governance message*/
 export class PythGovernanceHeader {
@@ -131,18 +146,21 @@ export class PythGovernanceHeader {
     } else if (this.action in TargetAction) {
       module = MODULE_TARGET;
       action = TargetAction[this.action as keyof typeof TargetAction];
-    } else {
+    } else if (this.action in EvmExecutorAction) {
       module = MODULE_EVM_EXECUTOR;
       action = EvmExecutorAction[this.action as keyof typeof EvmExecutorAction];
+    } else {
+      module = MODULE_LAZER;
+      action = LazerAction[this.action as keyof typeof LazerAction];
     }
     if (toChainId(this.targetChainId) === undefined)
       throw new Error(`Invalid chain id ${this.targetChainId}`);
     const span = PythGovernanceHeader.layout.encode(
       {
-        magicNumber: MAGIC_NUMBER,
-        module,
         action,
         chain: toChainId(this.targetChainId),
+        magicNumber: MAGIC_NUMBER,
+        module,
       },
       buffer,
     );
@@ -150,17 +168,23 @@ export class PythGovernanceHeader {
   }
 }
 
-export const MAGIC_NUMBER = 0x4d475450;
+export const MAGIC_NUMBER = 0x4d_47_54_50;
 export const MODULE_EXECUTOR = 0;
 export const MODULE_TARGET = 1;
 export const MODULE_EVM_EXECUTOR = 2;
-export const MODULES = [MODULE_EXECUTOR, MODULE_TARGET, MODULE_EVM_EXECUTOR];
+export const MODULE_LAZER = 3;
+export const MODULES = [
+  MODULE_EXECUTOR,
+  MODULE_TARGET,
+  MODULE_EVM_EXECUTOR,
+  MODULE_LAZER,
+];
 
-export interface PythGovernanceAction {
+export type PythGovernanceAction = {
   readonly targetChainId: ChainName;
 
   encode(): Buffer;
-}
+};
 
 /** Helper class for implementing PythGovernanceAction using a BufferLayout.Layout for the payload. */
 export abstract class PythGovernanceActionImpl implements PythGovernanceAction {
@@ -188,7 +212,7 @@ export abstract class PythGovernanceActionImpl implements PythGovernanceAction {
     const payloadBuffer = Buffer.alloc(payloadLayout.span);
     payloadLayout.encode(payload, payloadBuffer);
 
-    return Buffer.concat([headerBuffer, payloadBuffer]);
+    return safeBufferConcat([headerBuffer, payloadBuffer]);
   }
 
   /** Decode this action from a buffer using the given layout for the payload. */

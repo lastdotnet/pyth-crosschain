@@ -8,30 +8,31 @@ import { NoResults } from "@pythnetwork/component-library/NoResults";
 import { Paginator } from "@pythnetwork/component-library/Paginator";
 import { SearchInput } from "@pythnetwork/component-library/SearchInput";
 import { Select } from "@pythnetwork/component-library/Select";
+import { SymbolPairTag } from "@pythnetwork/component-library/SymbolPairTag";
 import type {
   RowConfig,
   SortDescriptor,
 } from "@pythnetwork/component-library/Table";
 import { Table } from "@pythnetwork/component-library/Table";
 import { useLogger } from "@pythnetwork/component-library/useLogger";
-import { useQueryState, parseAsString } from "nuqs";
+import { useQueryParamFilterPagination } from "@pythnetwork/component-library/useQueryParamsPagination";
+import { parseAsString, useQueryState } from "@pythnetwork/react-hooks/nuqs";
+import { matchSorter } from "match-sorter";
 import type { ReactNode } from "react";
 import { Suspense, useCallback, useMemo } from "react";
-import { useFilter, useCollator } from "react-aria";
+import { useCollator } from "react-aria";
 
-import styles from "./price-feeds-card.module.scss";
-import { useQueryParamFilterPagination } from "../../hooks/use-query-param-filter-pagination";
 import { Cluster } from "../../services/pyth";
 import { AssetClassBadge } from "../AssetClassBadge";
 import { FeedKey } from "../FeedKey";
 import {
-  SKELETON_WIDTH,
-  LivePrice,
   LiveConfidence,
+  LivePrice,
   LiveValue,
+  SKELETON_WIDTH,
 } from "../LivePrices";
-import { PriceFeedTag } from "../PriceFeedTag";
 import { PriceName } from "../PriceName";
+import styles from "./price-feeds-card.module.scss";
 
 type Props = {
   id: string;
@@ -56,7 +57,6 @@ export const PriceFeedsCard = ({ priceFeeds, ...props }: Props) => (
 const ResolvedPriceFeedsCard = ({ priceFeeds, ...props }: Props) => {
   const logger = useLogger();
   const collator = useCollator();
-  const filter = useFilter({ sensitivity: "base", usage: "search" });
   const [assetClass, setAssetClass] = useQueryState(
     "assetClass",
     parseAsString.withDefault(""),
@@ -83,13 +83,18 @@ const ResolvedPriceFeedsCard = ({ priceFeeds, ...props }: Props) => {
     mkPageLink,
   } = useQueryParamFilterPagination(
     feedsFilteredByAssetClass,
-    (priceFeed, search) => filter.contains(priceFeed.displaySymbol, search),
+    () => true,
     (a, b, { column, direction }) => {
       const field = column === "assetClass" ? "assetClass" : "displaySymbol";
       return (
         (direction === "descending" ? -1 : 1) *
         collator.compare(a[field], b[field])
       );
+    },
+    (items, search) => {
+      return matchSorter(items, search, {
+        keys: ["displaySymbol", "symbol", "description", "key"],
+      });
     },
     { defaultSort: "priceFeedName" },
   );
@@ -107,42 +112,43 @@ const ResolvedPriceFeedsCard = ({ priceFeeds, ...props }: Props) => {
           icon,
           assetClass,
         }) => ({
-          id: symbol,
-          href: `/price-feeds/${encodeURIComponent(symbol)}`,
-          textValue: displaySymbol,
           data: {
+            assetClass: <AssetClassBadge>{assetClass}</AssetClassBadge>,
+            confidenceInterval: (
+              <LiveConfidence cluster={Cluster.Pythnet} feedKey={key} />
+            ),
             exponent: (
               <LiveValue
-                field="exponent"
-                feedKey={key}
-                defaultValue={exponent}
                 cluster={Cluster.Pythnet}
+                defaultValue={exponent}
+                feedKey={key}
+                field="exponent"
               />
             ),
             numPublishers: (
               <LiveValue
-                field="numQuoters"
-                feedKey={key}
-                defaultValue={numQuoters}
                 cluster={Cluster.Pythnet}
+                defaultValue={numQuoters}
+                feedKey={key}
+                field="numQuoters"
               />
             ),
-            price: <LivePrice feedKey={key} cluster={Cluster.Pythnet} />,
-            confidenceInterval: (
-              <LiveConfidence feedKey={key} cluster={Cluster.Pythnet} />
+            price: <LivePrice cluster={Cluster.Pythnet} feedKey={key} />,
+            priceFeedId: (
+              <FeedKey className={styles.feedKey ?? ""} feedKey={key} />
             ),
             priceFeedName: (
-              <PriceFeedTag
+              <SymbolPairTag
+                className={styles.symbol}
                 description={description}
                 displaySymbol={displaySymbol}
                 icon={icon}
               />
             ),
-            assetClass: <AssetClassBadge>{assetClass}</AssetClassBadge>,
-            priceFeedId: (
-              <FeedKey feedKey={key} className={styles.feedKey ?? ""} />
-            ),
           },
+          href: `/price-feeds/${encodeURIComponent(symbol)}`,
+          id: symbol,
+          textValue: displaySymbol,
         }),
       ),
     [paginatedItems],
@@ -168,21 +174,21 @@ const ResolvedPriceFeedsCard = ({ priceFeeds, ...props }: Props) => {
 
   return (
     <PriceFeedsCardContents
-      numResults={numResults}
-      search={search}
-      sortDescriptor={sortDescriptor}
       assetClass={assetClass}
       assetClasses={assetClasses}
+      mkPageLink={mkPageLink}
       numPages={numPages}
-      page={page}
-      pageSize={pageSize}
+      numResults={numResults}
+      onAssetClassChange={updateAssetClass}
+      onPageChange={updatePage}
+      onPageSizeChange={updatePageSize}
       onSearchChange={updateSearch}
       onSortChange={updateSortDescriptor}
-      onAssetClassChange={updateAssetClass}
-      onPageSizeChange={updatePageSize}
-      onPageChange={updatePage}
-      mkPageLink={mkPageLink}
+      page={page}
+      pageSize={pageSize}
       rows={rows}
+      search={search}
+      sortDescriptor={sortDescriptor}
       {...props}
     />
   );
@@ -221,42 +227,45 @@ type PriceFeedsCardContents = Pick<Props, "id"> &
 
 const PriceFeedsCardContents = ({ id, ...props }: PriceFeedsCardContents) => (
   <Card
-    id={id}
-    icon={<ChartLine />}
     className={styles.priceFeedsCard}
+    icon={<ChartLine />}
+    id={id}
     title={
       <>
         <span>Price Feeds</span>
         {!props.isLoading && (
-          <Badge style="filled" variant="neutral" size="md">
+          <Badge size="md" style="filled" variant="neutral">
             {props.numResults}
           </Badge>
         )}
       </>
     }
-    toolbarClassName={styles.toolbar}
     toolbar={
       <>
         <SearchInput
+          className={styles.searchInput ?? ""}
+          placeholder="Feed symbol"
           size="sm"
           width={50}
-          placeholder="Feed symbol"
-          className={styles.searchInput ?? ""}
           {...(props.isLoading
-            ? { isPending: true, isDisabled: true }
+            ? { isDisabled: true, isPending: true }
             : {
-                value: props.search,
                 onChange: props.onSearchChange,
+                value: props.search,
               })}
         />
         <Select
+          hideLabel
           label="Asset Class"
           size="sm"
           variant="outline"
-          hideLabel
           {...(props.isLoading
-            ? { isPending: true, options: [], buttonLabel: "Asset Class" }
+            ? { buttonLabel: "Asset Class", isPending: true, options: [] }
             : {
+                buttonLabel:
+                  props.assetClass === "" ? "Asset Class" : props.assetClass,
+                hideGroupLabel: true,
+                onSelectionChange: props.onAssetClassChange,
                 optionGroups: [
                   { name: "All", options: [{ id: "" }] },
                   {
@@ -264,35 +273,29 @@ const PriceFeedsCardContents = ({ id, ...props }: PriceFeedsCardContents) => (
                     options: props.assetClasses.map((id) => ({ id })),
                   },
                 ],
-                hideGroupLabel: true,
-                show: ({ id }) => (id === "" ? "All" : id),
                 placement: "bottom end",
-                buttonLabel:
-                  props.assetClass === "" ? "Asset Class" : props.assetClass,
                 selectedKey: props.assetClass,
-                onSelectionChange: props.onAssetClassChange,
+                show: ({ id }) => (id === "" ? "All" : id),
               })}
         />
       </>
     }
+    toolbarClassName={styles.toolbar}
     {...(!props.isLoading && {
       footer: (
         <Paginator
-          numPages={props.numPages}
           currentPage={props.page}
-          onPageChange={props.onPageChange}
-          pageSize={props.pageSize}
-          onPageSizeChange={props.onPageSizeChange}
-          pageSizeOptions={[10, 20, 30, 40, 50]}
           mkPageLink={props.mkPageLink}
+          numPages={props.numPages}
+          onPageChange={props.onPageChange}
+          onPageSizeChange={props.onPageSizeChange}
+          pageSize={props.pageSize}
         />
       ),
     })}
   >
     <EntityList
-      label="Price Feeds"
       className={styles.entityList ?? ""}
-      headerLoadingSkeleton={<PriceFeedTag isLoading />}
       fields={[
         { id: "assetClass", name: "Asset Class" },
         { id: "priceFeedId", name: "Price Feed ID" },
@@ -300,7 +303,9 @@ const PriceFeedsCardContents = ({ id, ...props }: PriceFeedsCardContents) => (
         { id: "exponent", name: "Exponent" },
         { id: "numPublishers", name: "# Publishers" },
       ]}
+      headerLoadingSkeleton={<SymbolPairTag isLoading />}
       isLoading={props.isLoading}
+      label="Price Feeds"
       rows={
         props.isLoading
           ? []
@@ -316,78 +321,78 @@ const PriceFeedsCardContents = ({ id, ...props }: PriceFeedsCardContents) => (
       }
     />
     <Table
-      rounded
-      fill
-      label="Price Feeds"
-      stickyHeader="appHeader"
       className={styles.table ?? ""}
       columns={[
         {
+          alignment: "left",
+          allowsSorting: true,
           id: "priceFeedName",
-          name: "PRICE FEED",
           isRowHeader: true,
-          alignment: "left",
-          loadingSkeleton: <PriceFeedTag isLoading />,
-          allowsSorting: true,
+          loadingSkeleton: <SymbolPairTag isLoading />,
+          name: "PRICE FEED",
         },
         {
+          alignment: "left",
+          allowsSorting: true,
           id: "assetClass",
-          name: "ASSET CLASS",
-          alignment: "left",
-          width: 75,
           loadingSkeletonWidth: 20,
-          allowsSorting: true,
+          name: "ASSET CLASS",
+          width: 45,
         },
         {
+          alignment: "left",
           id: "priceFeedId",
-          name: "PRICE FEED ID",
-          alignment: "left",
-          width: 50,
           loadingSkeletonWidth: 30,
-        },
-        {
-          id: "price",
-          name: <PriceName uppercase />,
-          alignment: "right",
+          name: "PRICE FEED ID",
           width: 40,
-          loadingSkeletonWidth: SKELETON_WIDTH,
         },
         {
-          id: "confidenceInterval",
-          name: "CONFIDENCE INTERVAL",
+          alignment: "right",
+          id: "price",
+          loadingSkeletonWidth: SKELETON_WIDTH,
+          name: <PriceName uppercase />,
+          width: 45,
+        },
+        {
           alignment: "left",
-          width: 50,
+          id: "confidenceInterval",
           loadingSkeletonWidth: SKELETON_WIDTH,
+          name: "CONFIDENCE INTERVAL",
+          width: 45,
         },
         {
+          alignment: "left",
           id: "exponent",
           name: "EXPONENT",
-          alignment: "left",
           width: 8,
         },
         {
+          alignment: "left",
           id: "numPublishers",
           name: "# PUBLISHERS",
-          alignment: "left",
           width: 8,
         },
       ]}
+      fill
+      label="Price Feeds"
+      rounded
+      stickyHeader="appHeader"
       {...(props.isLoading
         ? {
             isLoading: true,
           }
         : {
-            rows: props.rows,
-            sortDescriptor: props.sortDescriptor,
-            onSortChange: props.onSortChange,
             emptyState: (
               <NoResults
-                query={props.search}
                 onClearSearch={() => {
                   props.onSearchChange("");
                 }}
+                query={props.search}
               />
             ),
+            onSortChange: props.onSortChange,
+            rows: props.rows,
+            sortDescriptor: props.sortDescriptor,
           })}
     />
   </Card>

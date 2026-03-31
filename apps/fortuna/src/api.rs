@@ -1,6 +1,7 @@
 use {
     crate::{
         chain::reader::{BlockNumber, BlockStatus, EntropyReader},
+        config::Config,
         history::History,
         state::MonitoredHashChainState,
     },
@@ -22,9 +23,12 @@ use {
     tokio::sync::RwLock,
     url::Url,
 };
-pub use {chain_ids::*, explorer::*, index::*, live::*, metrics::*, ready::*, revelation::*};
+pub use {
+    chain_ids::*, config::*, explorer::*, index::*, live::*, metrics::*, ready::*, revelation::*,
+};
 
 mod chain_ids;
+mod config;
 mod explorer;
 mod index;
 mod live;
@@ -35,11 +39,12 @@ mod revelation;
 pub type ChainId = String;
 pub type NetworkId = u64;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub enum StateTag {
     Pending,
-    Completed,
     Failed,
+    Completed,
+    CallbackErrored,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
@@ -63,6 +68,8 @@ pub struct ApiState {
     pub metrics: Arc<ApiMetrics>,
 
     pub explorer_metrics: Arc<ExplorerMetrics>,
+
+    pub config: Config,
 }
 
 impl ApiState {
@@ -70,6 +77,7 @@ impl ApiState {
         chains: Arc<RwLock<HashMap<ChainId, ApiBlockChainState>>>,
         metrics_registry: Arc<RwLock<Registry>>,
         history: Arc<History>,
+        config: &Config,
     ) -> ApiState {
         let metrics = ApiMetrics {
             http_requests: Family::default(),
@@ -90,6 +98,7 @@ impl ApiState {
             explorer_metrics,
             history,
             metrics_registry,
+            config: config.clone(),
         }
     }
 }
@@ -201,6 +210,7 @@ pub fn routes(state: ApiState) -> Router<(), Body> {
             "/v1/chains/:chain_id/revelations/:sequence",
             get(revelation),
         )
+        .route("/v1/chains/configs", get(get_chain_configs))
         .with_state(state)
 }
 
@@ -209,7 +219,7 @@ pub fn routes(state: ApiState) -> Router<(), Body> {
 /// The path and API are highly coupled. Please be sure to keep them consistent.
 pub fn get_register_uri(base_uri: &str, chain_id: &str) -> Result<String> {
     let base_uri = Url::parse(base_uri)?;
-    let path = format!("/v1/chains/{}", chain_id);
+    let path = format!("/v1/chains/{chain_id}");
     let uri = base_uri.join(&path)?;
     Ok(uri.to_string())
 }
@@ -220,9 +230,10 @@ mod test {
         crate::{
             api::{
                 self, ApiBlockChainState, ApiState, BinaryEncoding, Blob, BlockchainState,
-                GetRandomValueResponse,
+                ChainConfigSummary, GetRandomValueResponse,
             },
             chain::reader::{mock::MockEntropyReader, BlockStatus},
+            config::Config,
             history::History,
             state::{HashChainState, MonitoredHashChainState, PebbleHashChain},
         },
@@ -301,10 +312,40 @@ mod test {
             ApiBlockChainState::Initialized(avax_state),
         );
 
+        // Create a minimal config for testing
+        let config = Config {
+            chains: HashMap::new(),
+            provider: crate::config::ProviderConfig {
+                uri: "http://localhost:8080/".to_string(),
+                address: PROVIDER,
+                private_key: crate::config::SecretString {
+                    value: Some("0xabcd".to_string()),
+                    file: None,
+                },
+                secret: crate::config::SecretString {
+                    value: Some("abcd".to_string()),
+                    file: None,
+                },
+                chain_length: 100000,
+                chain_sample_interval: 10,
+                fee_manager: None,
+            },
+            keeper: crate::config::KeeperConfig {
+                private_key: crate::config::SecretString {
+                    value: Some("0xabcd".to_string()),
+                    file: None,
+                },
+                fee_manager_private_key: None,
+                other_keeper_addresses: vec![],
+                replica_config: None,
+            },
+        };
+
         let api_state = ApiState::new(
             Arc::new(RwLock::new(chains)),
             metrics_registry,
             Arc::new(History::new().await.unwrap()),
+            &config,
         )
         .await;
 
@@ -523,5 +564,233 @@ mod test {
             StatusCode::FORBIDDEN,
         )
         .await;
+    }
+
+    #[tokio::test]
+    async fn test_chain_configs() {
+        let (server, _, _) = test_server().await;
+
+        // Test the chain configs endpoint
+        let response = server.get("/v1/chains/configs").await;
+        response.assert_status(StatusCode::OK);
+
+        // Parse the response as JSON
+        let configs: Vec<ChainConfigSummary> = response.json();
+
+        // Verify the response structure - should be empty for test server
+        assert_eq!(
+            configs.len(),
+            0,
+            "Should return empty configs for test server"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_chain_configs_with_data() {
+        use crate::api::get_chain_configs;
+        use axum::{routing::get, Router};
+
+        // Create a config with actual chain data
+        let mut config_chains = HashMap::new();
+        config_chains.insert(
+            "ethereum".to_string(),
+            crate::config::EthereumConfig {
+                geth_rpc_addr: "http://localhost:8545".to_string(),
+                contract_addr: Address::from_low_u64_be(0x1234),
+                reveal_delay_blocks: 1,
+                confirmed_block_status: BlockStatus::Latest,
+                backlog_range: 1000,
+                legacy_tx: false,
+                gas_limit: 500000,
+                priority_fee_multiplier_pct: 100,
+                min_reward_samples: 0,
+                fee_estimation_past_blocks: 10,
+                fee_estimation_reward_percentile: 5.0,
+                eip1559_fee_estimation_default_priority_fee: 3000,
+                eip1559_fee_estimation_priority_fee_trigger: 100000,
+                eip1559_fee_estimation_threshold_max_change: 200,
+                surge_threshold_1: 40000,
+                surge_threshold_2: 100000,
+                surge_threshold_3: 200000,
+                escalation_policy: crate::config::EscalationPolicyConfig::default(),
+                min_profit_pct: 0,
+                target_profit_pct: 20,
+                max_profit_pct: 100,
+                min_keeper_balance: 100000000000000000,
+                fee: 1500000000000000,
+                max_fee: None,
+                sync_fee_only_on_register: true,
+                commitments: None,
+                max_num_hashes: None,
+                block_delays: vec![5],
+            },
+        );
+        config_chains.insert(
+            "avalanche".to_string(),
+            crate::config::EthereumConfig {
+                geth_rpc_addr: "http://localhost:9650".to_string(),
+                contract_addr: Address::from_low_u64_be(0x5678),
+                reveal_delay_blocks: 2,
+                confirmed_block_status: BlockStatus::Latest,
+                backlog_range: 1000,
+                legacy_tx: false,
+                gas_limit: 600000,
+                priority_fee_multiplier_pct: 100,
+                min_reward_samples: 0,
+                fee_estimation_past_blocks: 10,
+                fee_estimation_reward_percentile: 5.0,
+                eip1559_fee_estimation_default_priority_fee: 3000,
+                eip1559_fee_estimation_priority_fee_trigger: 100000,
+                eip1559_fee_estimation_threshold_max_change: 200,
+                surge_threshold_1: 40000,
+                surge_threshold_2: 100000,
+                surge_threshold_3: 200000,
+                escalation_policy: crate::config::EscalationPolicyConfig::default(),
+                min_profit_pct: 0,
+                target_profit_pct: 20,
+                max_profit_pct: 100,
+                min_keeper_balance: 100000000000000000,
+                fee: 2000000000000000,
+                max_fee: None,
+                sync_fee_only_on_register: true,
+                commitments: None,
+                max_num_hashes: None,
+                block_delays: vec![5],
+            },
+        );
+
+        let config = Config {
+            chains: config_chains,
+            provider: crate::config::ProviderConfig {
+                uri: "http://localhost:8080/".to_string(),
+                address: PROVIDER,
+                private_key: crate::config::SecretString {
+                    value: Some("0xabcd".to_string()),
+                    file: None,
+                },
+                secret: crate::config::SecretString {
+                    value: Some("abcd".to_string()),
+                    file: None,
+                },
+                chain_length: 100000,
+                chain_sample_interval: 10,
+                fee_manager: None,
+            },
+            keeper: crate::config::KeeperConfig {
+                private_key: crate::config::SecretString {
+                    value: Some("0xabcd".to_string()),
+                    file: None,
+                },
+                fee_manager_private_key: None,
+                other_keeper_addresses: vec![],
+                replica_config: None,
+            },
+        };
+
+        // Create initialized blockchain states with network IDs
+        let eth_read = Arc::new(MockEntropyReader::with_requests(10, &[]));
+        let avax_read = Arc::new(MockEntropyReader::with_requests(10, &[]));
+
+        let eth_state = MonitoredHashChainState::new(
+            ETH_CHAIN.clone(),
+            Default::default(),
+            "ethereum".into(),
+            PROVIDER,
+        );
+
+        let eth_blockchain_state = BlockchainState {
+            id: "ethereum".into(),
+            network_id: 1, // Ethereum mainnet
+            state: Arc::new(eth_state),
+            contract: eth_read.clone(),
+            provider_address: PROVIDER,
+            reveal_delay_blocks: 1,
+            confirmed_block_status: BlockStatus::Latest,
+        };
+
+        let avax_state = MonitoredHashChainState::new(
+            AVAX_CHAIN.clone(),
+            Default::default(),
+            "avalanche".into(),
+            PROVIDER,
+        );
+
+        let avax_blockchain_state = BlockchainState {
+            id: "avalanche".into(),
+            network_id: 43114, // Avalanche C-Chain
+            state: Arc::new(avax_state),
+            contract: avax_read.clone(),
+            provider_address: PROVIDER,
+            reveal_delay_blocks: 2,
+            confirmed_block_status: BlockStatus::Latest,
+        };
+
+        // Create chains HashMap with initialized states
+        let mut chains = HashMap::new();
+        chains.insert(
+            "ethereum".into(),
+            ApiBlockChainState::Initialized(eth_blockchain_state),
+        );
+        chains.insert(
+            "avalanche".into(),
+            ApiBlockChainState::Initialized(avax_blockchain_state),
+        );
+
+        // Minimal ApiState for this endpoint
+        let api_state = ApiState {
+            chains: Arc::new(RwLock::new(chains)),
+            history: Arc::new(History::new().await.unwrap()),
+            metrics_registry: Arc::new(RwLock::new(Registry::default())),
+            metrics: Arc::new(crate::api::ApiMetrics {
+                http_requests: prometheus_client::metrics::family::Family::default(),
+            }),
+            explorer_metrics: Arc::new(
+                crate::api::ExplorerMetrics::new(Arc::new(RwLock::new(Registry::default()))).await,
+            ),
+            config,
+        };
+
+        let app = Router::new()
+            .route("/v1/chains/configs", get(get_chain_configs))
+            .with_state(api_state);
+        let server = TestServer::new(app).unwrap();
+
+        // Test the chain configs endpoint
+        let response = server.get("/v1/chains/configs").await;
+        response.assert_status(StatusCode::OK);
+
+        // Parse the response as JSON
+        let configs: Vec<ChainConfigSummary> = response.json();
+
+        // Verify we have 2 chains
+        assert_eq!(configs.len(), 2, "Should return 2 chain configs");
+
+        // Find ethereum config
+        let eth_config = configs
+            .iter()
+            .find(|c| c.name == "ethereum")
+            .expect("Ethereum config not found");
+        assert_eq!(
+            eth_config.contract_addr,
+            "0x0000000000000000000000000000000000001234"
+        );
+        assert_eq!(eth_config.reveal_delay_blocks, 1);
+        assert_eq!(eth_config.gas_limit, 500000);
+        assert_eq!(eth_config.default_fee, 1500000000000000);
+        assert_eq!(eth_config.network_id, 1); // Ethereum mainnet
+
+        // Find avalanche config
+        let avax_config = configs
+            .iter()
+            .find(|c| c.name == "avalanche")
+            .expect("Avalanche config not found");
+        assert_eq!(
+            avax_config.contract_addr,
+            "0x0000000000000000000000000000000000005678"
+        );
+        assert_eq!(avax_config.reveal_delay_blocks, 2);
+        assert_eq!(avax_config.gas_limit, 600000);
+        assert_eq!(avax_config.default_fee, 2000000000000000);
+        assert_eq!(avax_config.network_id, 43114); // Avalanche C-Chain
     }
 }

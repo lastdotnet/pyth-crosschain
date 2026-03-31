@@ -17,6 +17,7 @@ import styles from "./index.module.scss";
 import type { Props as ButtonProps } from "../Button/index.jsx";
 import { Button } from "../Button/index.jsx";
 import { DropdownCaretDown } from "../DropdownCaretDown/index.jsx";
+import { Spinner } from "../Spinner/index.jsx";
 import {
   ListBox,
   ListBoxItem,
@@ -32,7 +33,17 @@ export type Props<T extends { id: string | number }> = Omit<
     "variant" | "size" | "rounded" | "hideText" | "isPending"
   > &
   Pick<PopoverProps, "placement"> & {
+    /**
+     * if provided, customizes the label used
+     * for each dropdown option in the dropdown
+     * list popover
+     */
     show?: ((value: T) => ReactNode) | undefined;
+
+    /**
+     * if provided, customizes the chosen value
+     * displayed in the dropdown button trigger
+     */
     textValue?: ((value: T) => string) | undefined;
     icon?: ComponentProps<typeof Button>["beforeIcon"];
     label: ReactNode;
@@ -88,7 +99,18 @@ export const Select = <T extends { id: string | number }>({
   >
     <Label className={styles.label}>{label}</Label>
     <Button
-      afterIcon={<DropdownCaretDown className={styles.caret} />}
+      className={styles.trigger ?? ""}
+      afterIcon={
+        isPending ? (
+          <Spinner
+            label="Loading..."
+            isIndeterminate
+            className={styles.spinner ?? ""}
+          />
+        ) : (
+          <DropdownCaretDown className={styles.caret} />
+        )
+      }
       variant={variant}
       size={size}
       rounded={rounded}

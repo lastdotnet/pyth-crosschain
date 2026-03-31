@@ -1,8 +1,17 @@
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
-import { CosmWasmChain, EvmChain } from "../src/core/chains";
-import { createHash } from "crypto";
-import { DefaultStore } from "../src/node/utils/store";
+/* eslint-disable @typescript-eslint/no-floating-promises */
+
+/* eslint-disable unicorn/prefer-top-level-await */
+
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable no-console */
+
+import { createHash } from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { Wallet } from "@coral-xyz/anchor";
+import type { PythCluster } from "@pythnetwork/client/lib/cluster";
+import { getPythClusterApiUrl } from "@pythnetwork/client/lib/cluster";
 import {
   CosmosUpgradeContract,
   EvmExecute,
@@ -10,22 +19,37 @@ import {
   EvmUpgradeContract,
   getProposalInstructions,
   MultisigParser,
+  UpdateTrustedSigner264Bit,
+  UpgradeSuiLazerContract,
   WormholeMultisigInstruction,
 } from "@pythnetwork/xc-admin-common";
-import SquadsMesh from "@sqds/mesh";
-import {
-  getPythClusterApiUrl,
-  PythCluster,
-} from "@pythnetwork/client/lib/cluster";
-import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { AccountMeta, Keypair, PublicKey } from "@solana/web3.js";
+import type { AccountMeta } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import SquadsMeshClass from "@sqds/mesh";
+import Web3 from "web3";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
+
+import { CosmWasmChain, EvmChain, SuiChain } from "../src/core/chains";
+import { SuiLazerContract } from "../src/core/contracts";
 import {
   EvmEntropyContract,
   EvmPriceFeedContract,
   getCodeDigestWithoutAddress,
   EvmWormholeContract,
+  EvmLazerContract,
 } from "../src/core/contracts/evm";
-import Web3 from "web3";
+import { DefaultStore } from "../src/node/utils/store";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+
+function getSquadsMesh() {
+  // Handle nested default export from @sqds/mesh
+  return (
+    (SquadsMeshClass as { default?: typeof SquadsMeshClass }).default ??
+    SquadsMeshClass
+  );
+}
 
 const parser = yargs(hideBin(process.argv))
   .usage("Usage: $0 --cluster <cluster_id> --proposal <proposal_address>")
@@ -40,14 +64,21 @@ const parser = yargs(hideBin(process.argv))
       demandOption: true,
       desc: "The proposal address to check",
     },
+    "contract-type": {
+      type: "string",
+      demandOption: false,
+      desc: "Type of EVM contract to verify (entropy or lazer). Required when checking EvmExecute instructions.",
+      choices: ["entropy", "lazer"],
+    },
   });
 
 async function main() {
   const argv = await parser.argv;
   const cluster = argv.cluster as PythCluster;
-  const squad = SquadsMesh.endpoint(
+  const mesh = getSquadsMesh();
+  const squad = mesh.endpoint(
     getPythClusterApiUrl(cluster),
-    new NodeWallet(Keypair.generate()), // dummy wallet
+    new Wallet(Keypair.generate()), // dummy wallet
   );
   const transaction = await squad.getTransaction(new PublicKey(argv.proposal));
   const instructions = await getProposalInstructions(squad, transaction);
@@ -140,7 +171,7 @@ async function main() {
       if (instruction.governanceAction instanceof EvmExecute) {
         // Note: it only checks for upgrade entropy contracts right now
         console.log(
-          `Verifying EVMExecute on ${instruction.governanceAction.targetChainId}`,
+          `\nVerifying EVMExecute on ${instruction.governanceAction.targetChainId}`,
         );
         for (const chain of Object.values(DefaultStore.chains)) {
           if (
@@ -153,9 +184,13 @@ async function main() {
             const callAddress = instruction.governanceAction.callAddress;
             const calldata = instruction.governanceAction.calldata;
 
-            // TODO: If we add additional EVM contracts using the executor, we need to
-            // add some logic here to identify what kind of contract is at the call address.
-            const contract = new EvmEntropyContract(chain, callAddress);
+            // Get contract type from flag, default to "entropy" for backward compatibility
+            const contractType = argv["contract-type"] ?? "entropy";
+
+            const contract: EvmEntropyContract | EvmLazerContract =
+              contractType === "lazer"
+                ? new EvmLazerContract(chain, callAddress)
+                : new EvmEntropyContract(chain, callAddress);
             const owner = await contract.getOwner();
 
             if (
@@ -179,7 +214,7 @@ async function main() {
               .encodeFunctionSignature(invokedMethod)
               .replace("0x", "");
 
-            let newImplementationAddress: string | undefined = undefined;
+            let newImplementationAddress: string | undefined;
             if (calldataHex.startsWith(methodSignature)) {
               newImplementationAddress = web3.eth.abi.decodeParameter(
                 "address",
@@ -206,6 +241,86 @@ async function main() {
               `${chain.getId()}    new implementation address:${newImplementationAddress} has code digest:${newImplementationCode}`,
             );
           }
+        }
+      }
+      if (instruction.governanceAction instanceof UpdateTrustedSigner264Bit) {
+        const { targetChainId, publicKey, expiresAt } =
+          instruction.governanceAction;
+
+        console.log(
+          `Verifying UpdateTrustedSigner264Bit on '${targetChainId}'`,
+        );
+
+        const expiresAtMs = expiresAt * 1000n;
+        if (expiresAtMs > Number.MAX_SAFE_INTEGER) {
+          console.error(
+            "expiration value in milliseconds cannot be represented as a JS integer:",
+            expiresAtMs,
+          );
+          continue;
+        }
+        const expiresAtDate = new Date(Number(expiresAtMs));
+
+        console.log("Trusted signer proposal info:");
+        console.log("  public key:", publicKey);
+        console.log("  expires at:", expiresAtDate);
+      }
+      if (instruction.governanceAction instanceof UpgradeSuiLazerContract) {
+        const { targetChainId, version, hash } = instruction.governanceAction;
+
+        console.log(`Verifying UpgradeSuiLazerContract on '${targetChainId}'`);
+
+        if (targetChainId === "sui") {
+          const chain = DefaultStore.chains.sui_mainnet;
+
+          if (!(chain instanceof SuiChain)) {
+            console.error("Could not find valid Sui mainnet chain in store");
+            continue;
+          }
+
+          const packagePath = path.resolve(
+            scriptDir,
+            "../../lazer/contracts/sui",
+          );
+
+          const contracts = Object.values(DefaultStore.lazer_contracts)
+            .filter((c) => c instanceof SuiLazerContract)
+            .filter((c) => c.chain.isMainnet());
+
+          if (contracts.length === 0) {
+            console.error("Could not find valid Sui Lazer contract in store");
+            continue;
+          }
+
+          const client = chain.getProvider();
+          for (const contract of contracts) {
+            const info = await chain.getStatePackageInfo(
+              client,
+              contract.stateId,
+            );
+            if (BigInt(info.version) + 1n !== version) {
+              console.log(
+                "Proposal upgrade version does not follow current version:",
+              );
+              console.log(
+                `  current version is ${info.version}, proposed ${version}`,
+              );
+            }
+          }
+
+          await chain.updateLazerMeta(packagePath, {
+            version: version.toString(),
+            receiver_chain_id: chain.getWormholeChainId(),
+          });
+          const pkg = await chain.buildPackage(packagePath);
+          const buildHash = Buffer.from(pkg.digest).toString("hex");
+          if (buildHash !== hash) {
+            console.log("Proposal package digest does not match local build:");
+            console.log(`  expected ${buildHash}`);
+            console.log(`     found ${hash}`);
+          }
+        } else {
+          console.log(`Unsupported target chain '${targetChainId}'`);
         }
       }
     }

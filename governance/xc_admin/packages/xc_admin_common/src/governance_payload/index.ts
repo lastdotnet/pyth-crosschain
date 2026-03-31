@@ -5,7 +5,7 @@ import {
   UpgradeContract256Bit,
 } from "./UpgradeContract";
 import {
-  PythGovernanceAction,
+  type PythGovernanceAction,
   PythGovernanceHeader,
 } from "./PythGovernanceAction";
 import {
@@ -22,6 +22,8 @@ import {
 import { EvmExecute } from "./ExecuteAction";
 import { SetTransactionFee } from "./SetTransactionFee";
 import { WithdrawFee } from "./WithdrawFee";
+import { UpgradeSuiLazerContract } from "./UpgradeLazerContract";
+import { UpdateTrustedSigner264Bit } from "./UpdateTrustedSigner";
 
 /** Decode a governance payload */
 export function decodeGovernancePayload(
@@ -79,6 +81,10 @@ export function decodeGovernancePayload(
       return SetTransactionFee.decode(data);
     case "WithdrawFee":
       return WithdrawFee.decode(data);
+    case "UpgradeSuiLazerContract":
+      return UpgradeSuiLazerContract.decode(data);
+    case "UpdateTrustedSigner":
+      return UpdateTrustedSigner264Bit.decode(data);
     default:
       return undefined;
   }
@@ -96,3 +102,5 @@ export * from "./SetTransactionFee";
 export * from "./SetWormholeAddress";
 export * from "./ExecuteAction";
 export * from "./WithdrawFee";
+export * from "./UpgradeLazerContract";
+export * from "./UpdateTrustedSigner";

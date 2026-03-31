@@ -7,7 +7,7 @@ import { lookup as lookupPublisher } from "@pythnetwork/known-publishers";
 
 import styles from "./index.module.scss";
 import { PublishersCard } from "./publishers-card";
-import { getPublishers } from "../../services/clickhouse";
+import { getPublishersWithRankings } from "../../get-publishers-with-rankings";
 import { getPublisherCaps } from "../../services/hermes";
 import { Cluster } from "../../services/pyth";
 import {
@@ -22,18 +22,20 @@ import { PublisherIcon } from "../PublisherIcon";
 import { SemicircleMeter, Label } from "../SemicircleMeter";
 import { TokenIcon } from "../TokenIcon";
 
-const INITIAL_REWARD_POOL_SIZE = 60_000_000_000_000n;
+const INITIAL_REWARD_POOL_SIZE = 110_000_010_000_000n;
 
 export const Publishers = async () => {
   const [pythnetPublishers, pythtestConformancePublishers, oisStats] =
     await Promise.all([
-      getPublishers(Cluster.Pythnet),
-      getPublishers(Cluster.PythtestConformance),
+      getPublishersWithRankings(Cluster.Pythnet),
+      getPublishersWithRankings(Cluster.PythtestConformance),
       getOisStats(),
     ]);
-
-  const rankingTime = pythnetPublishers[0]?.timestamp;
-  const scoreTime = pythnetPublishers[0]?.scoreTime;
+  const rankedPublishers = pythnetPublishers.filter(
+    (publisher) => publisher.scoreTime !== undefined,
+  );
+  const rankingTime = rankedPublishers[0]?.timestamp;
+  const scoreTime = rankedPublishers[0]?.scoreTime;
 
   return (
     <div className={styles.publishers}>
@@ -66,10 +68,10 @@ export const Publishers = async () => {
           corner={<ExplainAverage scoreTime={scoreTime} />}
           className={styles.statCard ?? ""}
           stat={(
-            pythnetPublishers.reduce(
-              (sum, publisher) => sum + publisher.averageScore,
+            rankedPublishers.reduce(
+              (sum, publisher) => sum + (publisher.averageScore ?? 0),
               0,
-            ) / pythnetPublishers.length
+            ) / rankedPublishers.length
           ).toFixed(2)}
         />
         <PublishersCard
@@ -150,7 +152,7 @@ const toTableRow = ({
   permissionedFeeds,
   activeFeeds,
   averageScore,
-}: Awaited<ReturnType<typeof getPublishers>>[number]) => {
+}: Awaited<ReturnType<typeof getPublishersWithRankings>>[number]) => {
   const knownPublisher = lookupPublisher(key);
   return {
     id: key,
@@ -173,7 +175,6 @@ const getOisStats = async () => {
       getDistributedRewards(),
       getPublisherCaps(),
     ]);
-
   return {
     totalStaked:
       sumDelegations(delState.delState) + sumDelegations(delState.selfDelState),

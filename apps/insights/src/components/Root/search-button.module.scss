@@ -1,21 +1,5 @@
 @use "@pythnetwork/component-library/theme";
 
-.searchButton {
-  .largeScreenSearchButton {
-    display: none;
-
-    @include theme.breakpoint("md") {
-      display: inline-flex;
-    }
-  }
-
-  .smallScreenSearchButton {
-    @include theme.breakpoint("md") {
-      display: none;
-    }
-  }
-}
-
 .searchDialogContents {
   gap: theme.spacing(1);
   display: flex;
@@ -144,6 +128,7 @@
 
         .itemTag {
           flex-grow: 1;
+          margin-right: theme.spacing(6);
         }
 
         .smallScreen {

@@ -1,11 +1,17 @@
-export { SuiPriceServiceConnection } from "./SuiPriceServiceConnection";
-export { SuiPythClient } from "./client";
+export { SuiPriceServiceConnection } from "./SuiPriceServiceConnection.js";
+export { SuiPythClient } from "./client.js";
 
-export {
+export type {
+  AssetType,
+  BinaryPriceUpdate,
   DurationInMs,
+  DurationInSeconds,
+  EncodingType,
+  HermesClientConfig,
   HexString,
-  Price,
-  PriceFeed,
-  PriceServiceConnectionConfig,
+  PriceFeedMetadata,
+  PriceIdInput,
+  PriceUpdate,
+  PublisherCaps,
   UnixTimestamp,
-} from "@pythnetwork/price-service-client";
+} from "@pythnetwork/hermes-client";

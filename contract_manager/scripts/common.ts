@@ -1,19 +1,38 @@
-import { DefaultStore } from "../src/node/utils/store";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-import Web3 from "web3";
-import { Contract } from "web3-eth-contract";
-import { InferredOptionType } from "yargs";
-import { PrivateKey, getDefaultDeploymentConfig } from "../src/core/base";
-import { EvmChain } from "../src/core/chains";
-import { EvmEntropyContract, EvmWormholeContract } from "../src/core/contracts";
+/* eslint-disable tsdoc/syntax */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 
-export interface BaseDeployConfig {
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable no-console */
+
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+import Web3 from "web3";
+import type { Contract } from "web3-eth-contract";
+import type { InferredOptionType } from "yargs";
+
+import type { PrivateKey } from "../src/core/base";
+import { getDefaultDeploymentConfig } from "../src/core/base";
+import { EvmChain } from "../src/core/chains";
+import {
+  EvmEntropyContract,
+  EvmExecutorContract,
+  EvmWormholeContract,
+} from "../src/core/contracts";
+import { DefaultStore } from "../src/node/utils/store";
+
+export type BaseDeployConfig = {
   gasMultiplier: number;
   gasPriceMultiplier: number;
   jsonOutputDir: string;
   privateKey: PrivateKey;
-}
+};
 
 // Deploys a contract if it was not deployed before.
 // It will check for the past deployments in file `cacheFile` against a key
@@ -31,11 +50,18 @@ export async function deployIfNotCached(
   const key = cacheKey ?? `${chain.getId()}-${artifactName}`;
   return runIfNotCached(key, async () => {
     const artifact = JSON.parse(
-      readFileSync(join(config.jsonOutputDir, `${artifactName}.json`), "utf8"),
+      readFileSync(
+        path.join(
+          config.jsonOutputDir,
+          `${artifactName}.sol`,
+          `${artifactName}.json`,
+        ),
+        "utf8",
+      ),
     );
 
     // Handle bytecode which can be either a string or an object with an 'object' property
-    let bytecode = artifact["bytecode"];
+    let bytecode = artifact.bytecode;
     if (
       typeof bytecode === "object" &&
       bytecode !== null &&
@@ -52,7 +78,7 @@ export async function deployIfNotCached(
     console.log(`Deploying ${artifactName} on ${chain.getId()}...`);
     const addr = await chain.deploy(
       config.privateKey,
-      artifact["abi"],
+      artifact.abi,
       bytecode,
       deployArgs,
       config.gasMultiplier,
@@ -70,17 +96,20 @@ export function getWeb3Contract(
   address: string,
 ): Contract {
   const artifact = JSON.parse(
-    readFileSync(join(jsonOutputDir, `${artifactName}.json`), "utf8"),
+    readFileSync(
+      path.join(jsonOutputDir, `${artifactName}.sol`, `${artifactName}.json`),
+      "utf8",
+    ),
   );
   const web3 = new Web3();
-  return new web3.eth.Contract(artifact["abi"], address);
+  return new web3.eth.Contract(artifact.abi, address);
 }
 
 export const COMMON_DEPLOY_OPTIONS = {
   "std-output-dir": {
     type: "string",
     demandOption: true,
-    desc: "Path to the standard JSON output of the contracts (build artifact) directory",
+    desc: "Path to the Foundry output directory (typically 'out/' directory, contains Contract.sol/Contract.json structure)",
   },
   "private-key": {
     type: "string",
@@ -146,7 +175,7 @@ export const COMMON_UPGRADE_OPTIONS = {
   },
   "std-output": {
     type: "string",
-    demandOption: true,
+    demandOption: false,
     desc: "Path to the standard JSON output of the pyth contract (build artifact)",
   },
 } as const;
@@ -166,7 +195,7 @@ export function makeCacheFunction(
     }
     const result = await fn();
     cache[cacheKey] = result;
-    writeFileSync(cacheFile, JSON.stringify(cache, null, 2));
+    writeFileSync(cacheFile, JSON.stringify(cache, undefined, 2));
     return result;
   }
 
@@ -198,7 +227,7 @@ export function getSelectedChains(argv: {
         .toString()}`,
     );
   for (const chain of selectedChains) {
-    if (chain.isMainnet() != selectedChains[0].isMainnet())
+    if (chain.isMainnet() != selectedChains[0]?.isMainnet())
       throw new Error("All chains must be either mainnet or testnet");
   }
   return selectedChains;
@@ -235,13 +264,35 @@ export function findWormholeContract(
       return contract;
     }
   }
+  return;
 }
 
-export interface DeployWormholeReceiverContractsConfig
-  extends BaseDeployConfig {
+/**
+ * Finds the executor contract for a given EVM chain.
+ * @param {EvmChain} chain The EVM chain to find the executor contract for.
+ * @returns If found, the executor contract for the given EVM chain. Else, undefined
+ */
+export function findExecutorContract(
+  chain: EvmChain,
+): EvmExecutorContract | undefined {
+  for (const contract of Object.values(DefaultStore.executor_contracts)) {
+    if (
+      contract instanceof EvmExecutorContract &&
+      contract.chain.getId() === chain.getId()
+    ) {
+      console.log(
+        `Found executor contract for ${chain.getId()} at ${contract.address}`,
+      );
+      return contract;
+    }
+  }
+  return;
+}
+
+export type DeployWormholeReceiverContractsConfig = {
   saveContract: boolean;
   type: "stable" | "beta";
-}
+} & BaseDeployConfig;
 /**
  * Deploys the wormhole receiver contract for a given EVM chain.
  * @param {EvmChain} chain The EVM chain to find the wormhole receiver contract for.
@@ -334,15 +385,15 @@ export async function getOrDeployWormholeContract(
   );
 }
 
-export interface DefaultAddresses {
+export type DefaultAddresses = {
   mainnet: string;
   testnet: string;
-}
+};
 
 export async function topupAccountsIfNecessary(
   chain: EvmChain,
   deploymentConfig: BaseDeployConfig,
-  accounts: Array<[string, DefaultAddresses]>,
+  accounts: [string, DefaultAddresses][],
   minBalance = 0.01,
 ) {
   for (const [accountName, defaultAddresses] of accounts) {
@@ -362,6 +413,20 @@ export async function topupAccountsIfNecessary(
         deploymentConfig.privateKey,
       );
       web3.eth.accounts.wallet.add(signer);
+
+      // Get the current nonce to avoid conflicts with pending transactions
+      const nonce = await web3.eth.getTransactionCount(
+        signer.address,
+        "pending",
+      );
+      console.log(`Using nonce: ${nonce}`);
+
+      // Get gas price and apply multiplier
+      const baseGasPrice = await chain.getGasPrice();
+      const gasPrice = Math.trunc(
+        Number(baseGasPrice) * deploymentConfig.gasPriceMultiplier,
+      );
+
       const estimatedGas = await web3.eth.estimateGas({
         from: signer.address,
         to: accountAddress,
@@ -372,11 +437,16 @@ export async function topupAccountsIfNecessary(
         from: signer.address,
         to: accountAddress,
         gas: estimatedGas * deploymentConfig.gasMultiplier,
+        gasPrice: gasPrice.toString(),
+        nonce: nonce,
         value: web3.utils.toWei(`${minBalance}`, "ether"),
+        // // Uncomment this if your tx are getting stuck in the mempool. Or if you get this error:
+        // // "An existing transaction had higher priority"
+        // maxPriorityFeePerGas: gasPrice.toString(),
       });
 
       console.log(
-        `Topped up the ${accountName} address. Tx: `,
+        `Topped up the ${accountName} address. Tx:`,
         tx.transactionHash,
       );
     }

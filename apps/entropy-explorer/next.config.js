@@ -7,6 +7,13 @@ const config = {
 
   pageExtensions: ["ts", "tsx", "mdx"],
 
+  images: {
+    remotePatterns: [
+      new URL("https://icons.llamao.fi/icons/chains/*?w=20&h=20"),
+      new URL("https://www.tabichain.com/images/new2/tabi.svg"),
+    ],
+  },
+
   logging: {
     fetches: {
       fullUrl: true,
@@ -14,20 +21,22 @@ const config = {
   },
 
   turbopack: {
+    resolveExtensions: [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mts",
+      ".mjs",
+      ".cts",
+      ".cjs",
+    ],
     rules: {
       "*.svg": {
         loaders: ["@svgr/webpack"],
         as: "*.js",
       },
     },
-  },
-
-  webpack(config) {
-    config.module.rules.push({
-      test: /\.svg$/i,
-      use: ["@svgr/webpack"],
-    });
-    return config;
   },
 
   headers: async () => [

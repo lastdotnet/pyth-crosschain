@@ -185,9 +185,7 @@ where
             price_feed
                 .metadata
                 .prev_publish_time
-                .map_or(false, |prev_time| {
-                    prev_time != price_feed.price.publish_time
-                })
+                .is_some_and(|prev_time| prev_time != price_feed.price.publish_time)
         });
         // Retain price id in price_ids that are in parsed_price_updates
         price_ids.retain(|price_id| {
@@ -206,6 +204,20 @@ where
     // Check if price_ids is empty after filtering and return None if it is
     if price_ids.is_empty() {
         return Ok(None);
+    }
+
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs_f64())
+        .unwrap_or(0.0);
+    for pu in &parsed_price_updates {
+        if let Some(receive_time) = pu.metadata.proof_available_time {
+            let latency = now_secs - (receive_time as f64);
+            state
+                .metrics
+                .sse_broadcast_latency
+                .observe(latency.max(0.0));
+        }
     }
 
     let price_update_data = price_feeds_with_update_data.update_data;
@@ -231,5 +243,5 @@ where
 fn error_event<E: std::fmt::Debug>(e: E) -> Event {
     Event::default()
         .event("error")
-        .data(format!("Error receiving update: {:?}", e))
+        .data(format!("Error receiving update: {e:?}"))
 }

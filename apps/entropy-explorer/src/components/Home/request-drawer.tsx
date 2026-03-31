@@ -9,28 +9,42 @@ import { StatCard } from "@pythnetwork/component-library/StatCard";
 import { Table } from "@pythnetwork/component-library/Table";
 import { Term } from "@pythnetwork/component-library/Term";
 import type { OpenDrawerArgs } from "@pythnetwork/component-library/useDrawer";
+import type { ComponentProps } from "react";
 import { useNumberFormatter } from "react-aria";
 import TimeAgo from "react-timeago";
 
 import styles from "./request-drawer.module.scss";
-import { EntropyDeployments } from "../../entropy-deployments";
 import { getErrorDetails } from "../../errors";
-import type { Request, CallbackErrorRequest } from "../../requests";
+import type {
+  Request,
+  CallbackErrorRequest,
+  FailedRequest,
+} from "../../requests";
 import { Status } from "../../requests";
 import { truncate } from "../../truncate";
-import { Address } from "../Address";
+import { Account, Transaction } from "../Address";
 import { Status as StatusComponent } from "../Status";
 import { Timestamp } from "../Timestamp";
+import { ChainTag } from "./chain-tag";
 
-export const mkRequestDrawer = (request: Request): OpenDrawerArgs => ({
+export const mkRequestDrawer = (
+  request: Request,
+  now: Date,
+): OpenDrawerArgs => ({
   title: `Request ${truncate(request.requestTxHash)}`,
-  headingExtra: <StatusComponent prefix="CALLBACK " status={request.status} />,
+  headingExtra: <StatusComponent status={request.status} />,
   bodyClassName: styles.requestDrawer ?? "",
   fill: true,
-  contents: <RequestDrawerBody request={request} />,
+  contents: <RequestDrawerBody request={request} now={now} />,
 });
 
-const RequestDrawerBody = ({ request }: { request: Request }) => {
+const RequestDrawerBody = ({
+  request,
+  now,
+}: {
+  request: Request;
+  now: Date;
+}) => {
   const gasFormatter = useNumberFormatter({ maximumFractionDigits: 3 });
 
   return (
@@ -42,12 +56,12 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
           small
           variant="primary"
           stat={
-            request.status === Status.Pending ? (
-              <StatusComponent prefix="CALLBACK " status={Status.Pending} />
-            ) : (
+            "randomNumber" in request ? (
               <CopyButton text={request.randomNumber}>
                 <code>{truncate(request.randomNumber)}</code>
               </CopyButton>
+            ) : (
+              <StatusComponent status={request.status} />
             )
           }
         />
@@ -59,7 +73,10 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
         />
       </div>
       {request.status === Status.CallbackError && (
-        <CallbackFailedInfo request={request} />
+        <CallbackErrorInfo request={request} />
+      )}
+      {request.status === Status.Failed && (
+        <FailureInfo header="Reveal failed!" request={request} />
       )}
       <Table
         label="Details"
@@ -82,17 +99,26 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
         ]}
         rows={[
           {
+            id: "chain",
+            field: "Chain",
+            value: <ChainTag chain={request.chain} />,
+          },
+          {
             id: "requestTimestamp",
             field: "Request Timestamp",
-            value: <Timestamp timestamp={request.requestTimestamp} />,
+            value: <Timestamp timestamp={request.requestTimestamp} now={now} />,
           },
-          ...(request.status === Status.Pending
-            ? []
-            : [
+          ...("callbackTimestamp" in request
+            ? [
                 {
                   id: "callbackTimestamp",
                   field: "Callback Timestamp",
-                  value: <Timestamp timestamp={request.callbackTimestamp} />,
+                  value: (
+                    <Timestamp
+                      timestamp={request.callbackTimestamp}
+                      now={now}
+                    />
+                  ),
                 },
                 {
                   id: "duration",
@@ -113,7 +139,8 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
                     />
                   ),
                 },
-              ]),
+              ]
+            : []),
           {
             id: "requestTx",
             field: (
@@ -123,17 +150,19 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
               </Term>
             ),
             value: (
-              <Address chain={request.chain} value={request.requestTxHash} />
+              <Transaction
+                chain={request.chain}
+                value={request.requestTxHash}
+              />
             ),
           },
           {
             id: "sender",
             field: "Sender",
-            value: <Address chain={request.chain} value={request.sender} />,
+            value: <Account chain={request.chain} value={request.sender} />,
           },
-          ...(request.status === Status.Pending
-            ? []
-            : [
+          ...(request.status === Status.Complete
+            ? [
                 {
                   id: "callbackTx",
                   field: (
@@ -143,17 +172,18 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
                     </Term>
                   ),
                   value: (
-                    <Address
+                    <Transaction
                       chain={request.chain}
                       value={request.callbackTxHash}
                     />
                   ),
                 },
-              ]),
+              ]
+            : []),
           {
             id: "provider",
             field: "Provider",
-            value: <Address chain={request.chain} value={request.provider} />,
+            value: <Account chain={request.chain} value={request.provider} />,
           },
           {
             id: "userContribution",
@@ -163,32 +193,34 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
               </Term>
             ),
             value: (
-              <CopyButton text={request.userRandomNumber}>
-                <code>{truncate(request.userRandomNumber)}</code>
+              <CopyButton text={request.userContribution}>
+                <code>{truncate(request.userContribution)}</code>
               </CopyButton>
             ),
           },
-          {
-            id: "providerContribution",
-            field: (
-              <Term term="Provider Contribution">
-                Provider-submitted randomness used to calculate the random
-                number.
-              </Term>
-            ),
-            value: (
-              <CopyButton text={request.userRandomNumber}>
-                <code>{truncate(request.userRandomNumber)}</code>
-              </CopyButton>
-            ),
-          },
+          ...("providerContribution" in request
+            ? [
+                {
+                  id: "providerContribution",
+                  field: (
+                    <Term term="Provider Contribution">
+                      Provider-submitted randomness used to calculate the random
+                      number.
+                    </Term>
+                  ),
+                  value: (
+                    <CopyButton text={request.providerContribution}>
+                      <code>{truncate(request.providerContribution)}</code>
+                    </CopyButton>
+                  ),
+                },
+              ]
+            : []),
           {
             id: "gas",
             field: "Gas",
             value:
-              request.status === Status.Pending ? (
-                `${gasFormatter.format(request.gasLimit)} max`
-              ) : (
+              "gasUsed" in request ? (
                 <Meter
                   label="Gas"
                   value={request.gasUsed}
@@ -201,6 +233,8 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
                     request.gasUsed > request.gasLimit ? "error" : "default"
                   }
                 />
+              ) : (
+                `${gasFormatter.format(request.gasLimit)} max`
               ),
           },
         ].map((data) => ({
@@ -215,20 +249,12 @@ const RequestDrawerBody = ({ request }: { request: Request }) => {
   );
 };
 
-const CallbackFailedInfo = ({ request }: { request: CallbackErrorRequest }) => {
-  const deployment = EntropyDeployments[request.chain];
-  const retryCommand = `cast send ${deployment.address} 'revealWithCallback(address, uint64, bytes32, bytes32)' ${request.provider} ${request.sequenceNumber.toString()} ${request.userRandomNumber} ${request.randomNumber} -r ${deployment.rpc} --private-key <YOUR_PRIVATE_KEY>`;
+const CallbackErrorInfo = ({ request }: { request: CallbackErrorRequest }) => {
+  const retryCommand = `cast send ${request.chain.address} 'revealWithCallback(address, uint64, bytes32, bytes32)' ${request.provider} ${request.sequenceNumber.toString()} ${request.userContribution} ${request.providerContribution} -r ${request.chain.rpc} --private-key <YOUR_PRIVATE_KEY>`;
 
   return (
     <>
-      <InfoBox
-        header="Callback failed!"
-        icon={<Warning />}
-        className={styles.message}
-        variant="warning"
-      >
-        <CallbackFailureMessage request={request} />
-      </InfoBox>
+      <FailureInfo header="Callback failed!" request={request} />
       <InfoBox
         header="Retry the callback yourself"
         icon={<Code />}
@@ -246,10 +272,7 @@ const CallbackFailedInfo = ({ request }: { request: CallbackErrorRequest }) => {
             marginTop: "16px",
           }}
         >
-          <CopyButton text={retryCommand}>Copy Forge Command</CopyButton>
-          <Button size="sm" variant="outline">
-            Connect Wallet
-          </Button>
+          <CopyButton text={retryCommand}>Copy Cast Command</CopyButton>
           <Button
             size="sm"
             variant="ghost"
@@ -258,6 +281,7 @@ const CallbackFailedInfo = ({ request }: { request: CallbackErrorRequest }) => {
             hideText
             href="https://docs.pyth.network/entropy/debug-callback-failures"
             target="_blank"
+            className={styles.helpButton ?? ""}
           >
             Help
           </Button>
@@ -267,27 +291,74 @@ const CallbackFailedInfo = ({ request }: { request: CallbackErrorRequest }) => {
   );
 };
 
-const CallbackFailureMessage = ({
+const FailureInfo = ({
+  request,
+  ...props
+}: ComponentProps<typeof InfoBox> & {
+  request: CallbackErrorRequest | FailedRequest;
+}) => (
+  <InfoBox
+    icon={<Warning />}
+    className={styles.message}
+    variant="warning"
+    {...props}
+  >
+    <Button
+      hideText
+      beforeIcon={<Question />}
+      rounded
+      size="sm"
+      variant="ghost"
+      className={styles.helpButton ?? ""}
+      href={getHelpLink(request)}
+      target="_blank"
+    >
+      Help
+    </Button>
+    <div className={styles.failureMessage}>
+      <FailureMessage request={request} />
+    </div>
+  </InfoBox>
+);
+
+const getHelpLink = (request: CallbackErrorRequest | FailedRequest) => {
+  const details = getErrorDetails(request.reason);
+  if (details === undefined) {
+    return isGasLimitExceeded(request)
+      ? "https://docs.pyth.network/entropy/best-practices#limit-gas-usage-on-the-callback"
+      : "https://docs.pyth.network/entropy/best-practices#handling-callback-failures";
+  } else {
+    return details[2];
+  }
+};
+
+const FailureMessage = ({
   request,
 }: {
-  request: CallbackErrorRequest;
+  request: CallbackErrorRequest | FailedRequest;
 }) => {
-  if (request.returnValue === "" && request.gasUsed > request.gasLimit) {
-    return "The callback used more gas than the gas limit.";
-  } else {
-    const details = getErrorDetails(request.returnValue);
-    return details ? (
+  const details = getErrorDetails(request.reason);
+  if (details) {
+    return (
       <>
         <p>The callback encountered the following error:</p>
         <p className={styles.details}>
-          <b>{details[0]}</b> (<code>{request.returnValue}</code>): {details[1]}
+          <b>{details[0]}</b> (<code>{request.reason}</code>): {details[1]}
         </p>
       </>
-    ) : (
+    );
+  } else if (isGasLimitExceeded(request)) {
+    return "The callback used more gas than the set gas limit";
+  } else {
+    return (
       <>
-        The callback encountered an unknown error:{" "}
-        <code>{request.returnValue}</code>
+        <b>Error response:</b> {request.reason}
       </>
     );
   }
 };
+
+const isGasLimitExceeded = (request: CallbackErrorRequest | FailedRequest) =>
+  request.status === Status.CallbackError &&
+  request.reason === "0x" &&
+  request.gasUsed > request.gasLimit;

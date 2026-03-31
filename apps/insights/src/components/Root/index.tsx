@@ -1,20 +1,21 @@
+import "./css-vars.scss";
+
 import { AppShell } from "@pythnetwork/component-library/AppShell";
 import { lookup as lookupPublisher } from "@pythnetwork/known-publishers";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { NuqsAdapter } from "@pythnetwork/react-hooks/nuqs-adapters-next";
 import type { ReactNode } from "react";
-import { Suspense } from "react";
 
+import { SearchButton as SearchButtonImpl } from "./search-button";
 import {
+  AMPLITUDE_API_KEY,
   ENABLE_ACCESSIBILITY_REPORTING,
   GOOGLE_ANALYTICS_ID,
-  AMPLITUDE_API_KEY,
 } from "../../config/server";
-import { LivePriceDataProvider } from "../../hooks/use-live-price-data";
-import { getPublishers } from "../../services/clickhouse";
-import { Cluster, getFeeds } from "../../services/pyth";
+import { getPublishersWithRankings } from "../../get-publishers-with-rankings";
+import { Cluster } from "../../services/pyth";
+import { getFeeds } from "../../services/pyth/get-feeds";
 import { PriceFeedIcon } from "../PriceFeedIcon";
 import { PublisherIcon } from "../PublisherIcon";
-import { SearchButton as SearchButtonImpl } from "./search-button";
 
 export const TABS = [
   { segment: "", children: "Overview" },
@@ -32,13 +33,9 @@ export const Root = ({ children }: Props) => (
     amplitudeApiKey={AMPLITUDE_API_KEY}
     googleAnalyticsId={GOOGLE_ANALYTICS_ID}
     enableAccessibilityReporting={ENABLE_ACCESSIBILITY_REPORTING}
-    providers={[NuqsAdapter, LivePriceDataProvider]}
+    providers={[NuqsAdapter]}
     tabs={TABS}
-    extraCta={
-      <Suspense fallback={<SearchButtonImpl isLoading />}>
-        <SearchButton />
-      </Suspense>
-    }
+    extraCta={<SearchButton />}
   >
     {children}
   </AppShell>
@@ -57,8 +54,7 @@ const SearchButton = async () => {
 };
 
 const getPublishersForSearchDialog = async (cluster: Cluster) => {
-  "use cache";
-  const publishers = await getPublishers(cluster);
+  const publishers = await getPublishersWithRankings(cluster);
   return publishers.map((publisher) => {
     const knownPublisher = lookupPublisher(publisher.key);
 
@@ -75,19 +71,13 @@ const getPublishersForSearchDialog = async (cluster: Cluster) => {
 };
 
 const getFeedsForSearchDialog = async (cluster: Cluster) => {
-  "use cache";
   const feeds = await getFeeds(cluster);
-
   return feeds.map((feed) => ({
     symbol: feed.symbol,
     displaySymbol: feed.product.display_symbol,
     assetClass: feed.product.asset_type,
     description: feed.product.description,
-    icon: (
-      <PriceFeedIcon
-        assetClass={feed.product.asset_type}
-        symbol={feed.symbol}
-      />
-    ),
+    priceAccount: feed.product.price_account,
+    icon: <PriceFeedIcon assetClass={feed.product.asset_type} />,
   }));
 };

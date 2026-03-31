@@ -1,29 +1,75 @@
 {
-  "name": "pyth-iota-cli",
-  "version": "0.1.0",
-  "description": "Pyth IOTA Integration Cli tools",
-  "main": "index.js",
-  "license": "Apache-2.0",
-  "scripts": {
-    "cli": "ts-node src/cli.ts",
-    "build": "tsc",
-    "test:format": "prettier --check .",
-    "fix:format": "prettier --write ."
-  },
-  "private": "true",
   "dependencies": {
     "@certusone/wormhole-sdk": "^0.9.12",
-    "@iota/iota-sdk": "^0.5.0",
+    "@iota/iota-sdk": "^1.11.0",
     "@pythnetwork/contract-manager": "workspace:*",
     "@pythnetwork/price-service-client": "^1.4.0",
     "@pythnetwork/price-service-sdk": "^1.2.0",
     "@pythnetwork/xc-admin-common": "workspace:*",
-    "prettier": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "catalog:",
     "yargs": "^17.7.2"
   },
+  "description": "Pyth IOTA Integration Cli tools",
   "devDependencies": {
     "@types/yargs": "^17.0.32"
-  }
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "default": "./dist/esm/index.mjs",
+        "types": "./dist/esm/index.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/index.cjs",
+        "types": "./dist/cjs/index.d.ts"
+      }
+    },
+    "./cli": {
+      "import": {
+        "default": "./dist/esm/cli.mjs",
+        "types": "./dist/esm/cli.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/cli.cjs",
+        "types": "./dist/cjs/cli.d.ts"
+      }
+    },
+    "./package.json": "./package.json",
+    "./pyth_deploy": {
+      "import": {
+        "default": "./dist/esm/pyth_deploy.mjs",
+        "types": "./dist/esm/pyth_deploy.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/pyth_deploy.cjs",
+        "types": "./dist/cjs/pyth_deploy.d.ts"
+      }
+    },
+    "./upgrade_pyth": {
+      "import": {
+        "default": "./dist/esm/upgrade_pyth.mjs",
+        "types": "./dist/esm/upgrade_pyth.d.ts"
+      },
+      "require": {
+        "default": "./dist/cjs/upgrade_pyth.cjs",
+        "types": "./dist/cjs/upgrade_pyth.d.ts"
+      }
+    }
+  },
+  "license": "Apache-2.0",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.mjs",
+  "name": "pyth-iota-cli",
+  "private": "true",
+  "scripts": {
+    "build": "ts-duality",
+    "clean": "rm -rf ./dist",
+    "cli": "ts-node src/cli.ts"
+  },
+  "type": "module",
+  "types": "./dist/cjs/index.d.ts",
+  "version": "0.2.0"
 }

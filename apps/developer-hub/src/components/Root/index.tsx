@@ -1,36 +1,41 @@
-import { AppShell } from "@pythnetwork/component-library/AppShell";
-import { RootProvider as FumadocsRootProvider } from "fumadocs-ui/provider";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { RootProviders } from "@pythnetwork/component-library/AppShell";
+import { NuqsAdapter } from "@pythnetwork/react-hooks/nuqs-adapters-next";
+import { Analytics } from "@vercel/analytics/next";
+import { RootProvider as FumadocsRootProvider } from "fumadocs-ui/provider/next";
 import type { ReactNode } from "react";
-import "./global.css";
 
-import {
-  AMPLITUDE_API_KEY,
-  ENABLE_ACCESSIBILITY_REPORTING,
-  GOOGLE_ANALYTICS_ID,
-} from "../../config/server";
+import "./global.css";
 
 export const TABS = [
   { segment: "", children: "Home" },
-  { segment: "pyth-core", children: "Pyth Core" },
-  { segment: "lazer", children: "Lazer" },
+  { segment: "price-feeds", children: "Price Feeds" },
   { segment: "express-relay", children: "Express Relay" },
   { segment: "entropy", children: "Entropy" },
 ];
 
+export const Root = ({ children, googleAnalyticsId }: Props) => (
+  <html lang="en">
+    <body>
+      <RootProviders providers={[NuqsAdapter]}>
+        <FumadocsRootProvider
+          search={{
+            enabled: true,
+            options: {
+              api: "/api/search",
+            },
+          }}
+        >
+          {children}
+        </FumadocsRootProvider>
+      </RootProviders>
+      {googleAnalyticsId && <GoogleAnalytics gaId={googleAnalyticsId} />}
+      <Analytics />
+    </body>
+  </html>
+);
+
 type Props = {
   children: ReactNode;
+  googleAnalyticsId?: string | undefined;
 };
-
-export const Root = ({ children }: Props) => (
-  <AppShell
-    appName="Developer Hub"
-    amplitudeApiKey={AMPLITUDE_API_KEY}
-    googleAnalyticsId={GOOGLE_ANALYTICS_ID}
-    enableAccessibilityReporting={ENABLE_ACCESSIBILITY_REPORTING}
-    providers={[NuqsAdapter]}
-    tabs={TABS}
-  >
-    <FumadocsRootProvider>{children}</FumadocsRootProvider>
-  </AppShell>
-);

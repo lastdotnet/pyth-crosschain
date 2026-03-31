@@ -1,12 +1,31 @@
-import { Chain, SuiChain } from "../chains";
-import { DataSource } from "@pythnetwork/xc-admin-common";
-import { WormholeContract } from "./wormhole";
-import { PriceFeedContract, PrivateKey, TxResult } from "../base";
-import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-base-to-string */
+import { parseVaa } from "@certusone/wormhole-sdk";
+import { uint8ArrayToBCS } from "@certusone/wormhole-sdk/lib/cjs/sui";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
-import { uint8ArrayToBCS } from "@certusone/wormhole-sdk/lib/cjs/sui";
+import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
+import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
+import type { DataSource } from "@pythnetwork/xc-admin-common";
+import {
+  decodeGovernancePayload,
+  UpdateTrustedSigner264Bit,
+  UpgradeSuiLazerContract,
+} from "@pythnetwork/xc-admin-common";
+
+import { SubmittedWormholeMessage, Vault } from "../../node/utils/governance";
+import type { PrivateKey, TxResult } from "../base";
+import type { SuiLazerMeta } from "../chains";
+import { Chain, SuiChain } from "../chains";
+import { WormholeContract } from "./wormhole";
+import { PriceFeedContract, Storable } from "../base";
 
 type ObjectId = string;
 
@@ -18,9 +37,9 @@ export class SuiPriceFeedContract extends PriceFeedContract {
    * Given the ids of the pyth state and wormhole state, create a new SuiPriceFeedContract
    * The package ids are derived based on the state ids
    *
-   * @param chain the chain which this contract is deployed on
-   * @param stateId id of the pyth state for the deployed contract
-   * @param wormholeStateId id of the wormhole state for the wormhole contract that pyth binds to
+   * @param chain - the chain which this contract is deployed on
+   * @param stateId - id of the pyth state for the deployed contract
+   * @param wormholeStateId - id of the wormhole state for the wormhole contract that pyth binds to
    */
   constructor(
     public chain: SuiChain,
@@ -69,7 +88,7 @@ export class SuiPriceFeedContract extends PriceFeedContract {
 
   /**
    * Given a objectId, returns the id for the package that the object belongs to.
-   * @param objectId
+   * @param objectId - the object id to get
    */
   async getPackageId(objectId: ObjectId): Promise<ObjectId> {
     return this.client.getPackageId(objectId);
@@ -111,12 +130,12 @@ export class SuiPriceFeedContract extends PriceFeedContract {
   async getPriceFeed(feedId: string) {
     const provider = this.getProvider();
     const priceInfoObjectId = await this.client.getPriceFeedObjectId(feedId);
-    if (!priceInfoObjectId) return undefined;
+    if (!priceInfoObjectId) return;
     const priceInfo = await provider.getObject({
       id: priceInfoObjectId,
       options: { showContent: true },
     });
-    if (!priceInfo.data || !priceInfo.data.content) {
+    if (!priceInfo.data?.content) {
       throw new Error(
         `Price feed ID ${priceInfoObjectId} in price table but object not found!!`,
       );
@@ -144,8 +163,8 @@ export class SuiPriceFeedContract extends PriceFeedContract {
   /**
    * Given a signed VAA, execute the migration instruction on the pyth contract.
    * The payload of the VAA can be obtained from the `getUpgradePackagePayload` method.
-   * @param vaa
-   * @param keypair used to sign the transaction
+   * @param vaa - the vaa payload
+   * @param keypair - used to sign the transaction
    */
   async executeMigrateInstruction(vaa: Buffer, keypair: Ed25519Keypair) {
     const tx = new Transaction();
@@ -158,7 +177,7 @@ export class SuiPriceFeedContract extends PriceFeedContract {
 
     tx.moveCall({
       target: `${packageId}::migrate::migrate`,
-      arguments: [tx.object(this.stateId), verificationReceipt],
+      arguments: [tx.object(this.stateId), verificationReceipt!],
     });
 
     return this.executeTransaction(tx, keypair);
@@ -216,7 +235,7 @@ export class SuiPriceFeedContract extends PriceFeedContract {
 
     tx.moveCall({
       target: `${packageId}::governance::execute_governance_instruction`,
-      arguments: [tx.object(this.stateId), verificationReceipt],
+      arguments: [tx.object(this.stateId), verificationReceipt!],
     });
 
     const result = await this.executeTransaction(tx, keypair);
@@ -239,19 +258,19 @@ export class SuiPriceFeedContract extends PriceFeedContract {
 
     const [upgradeTicket] = tx.moveCall({
       target: `${packageId}::contract_upgrade::authorize_upgrade`,
-      arguments: [tx.object(this.stateId), verificationReceipt],
+      arguments: [tx.object(this.stateId), verificationReceipt!],
     });
 
     const [upgradeReceipt] = tx.upgrade({
       modules,
       dependencies,
       package: packageId,
-      ticket: upgradeTicket,
+      ticket: upgradeTicket!,
     });
 
     tx.moveCall({
       target: `${packageId}::contract_upgrade::commit_upgrade`,
-      arguments: [tx.object(this.stateId), upgradeReceipt],
+      arguments: [tx.object(this.stateId), upgradeReceipt!],
     });
     const result = await this.executeTransaction(tx, keypair);
     return { id: result.digest, info: result };
@@ -260,10 +279,9 @@ export class SuiPriceFeedContract extends PriceFeedContract {
   /**
    * Utility function to get the verification receipt object for a VAA that can be
    * used to authorize a governance instruction.
-   * @param tx
-   * @param packageId pyth package id
-   * @param vaa
-   * @private
+   * @param tx - the transaction
+   * @param packageId - pyth package id
+   * @param vaa - the vaa payload
    */
   async getVaaVerificationReceipt(
     tx: Transaction,
@@ -276,14 +294,14 @@ export class SuiPriceFeedContract extends PriceFeedContract {
       target: `${wormholePackageId}::vaa::parse_and_verify`,
       arguments: [
         tx.object(this.wormholeStateId),
-        tx.pure.arguments(Array.from(vaa)),
+        tx.pure.arguments([...vaa]),
         tx.object(SUI_CLOCK_OBJECT_ID),
       ],
     });
 
     const [verificationReceipt] = tx.moveCall({
       target: `${packageId}::governance::verify_vaa`,
-      arguments: [tx.object(this.stateId), verifiedVAA],
+      arguments: [tx.object(this.stateId), verifiedVAA!],
     });
     return verificationReceipt;
   }
@@ -291,9 +309,8 @@ export class SuiPriceFeedContract extends PriceFeedContract {
   /**
    * Given a transaction block and a keypair, sign and execute it
    * Sets the gas budget to 2x the estimated gas cost
-   * @param tx
-   * @param keypair
-   * @private
+   * @param tx - the transaction
+   * @param keypair - the keypair
    */
   private async executeTransaction(tx: Transaction, keypair: Ed25519Keypair) {
     const provider = this.getProvider();
@@ -328,7 +345,7 @@ export class SuiPriceFeedContract extends PriceFeedContract {
         value: "data_sources",
       },
     });
-    if (!result.data || !result.data.content) {
+    if (!result.data?.content) {
       throw new Error(
         "Data Sources not found, contract may not be initialized",
       );
@@ -395,11 +412,7 @@ export class SuiPriceFeedContract extends PriceFeedContract {
       id: this.stateId,
       options: { showContent: true },
     });
-    if (
-      !result.data ||
-      !result.data.content ||
-      result.data.content.dataType !== "moveObject"
-    )
+    if (!result.data?.content || result.data.content.dataType !== "moveObject")
       throw new Error("Unable to fetch pyth state object");
     return result.data.content.fields;
   }
@@ -503,7 +516,7 @@ export class SuiWormholeContract extends WormholeContract {
 
     const [decreeReceipt] = tx.moveCall({
       target: `${corePackageId}::governance_message::verify_vaa`,
-      arguments: [tx.object(coreObjectId), verifiedVaa, decreeTicket],
+      arguments: [tx.object(coreObjectId), verifiedVaa!, decreeTicket!],
       typeArguments: [
         `${corePackageId}::update_guardian_set::GovernanceWitness`,
       ],
@@ -513,7 +526,7 @@ export class SuiWormholeContract extends WormholeContract {
       target: `${corePackageId}::update_guardian_set::update_guardian_set`,
       arguments: [
         tx.object(coreObjectId),
-        decreeReceipt,
+        decreeReceipt!,
         tx.object(SUI_CLOCK_OBJECT_ID),
       ],
     });
@@ -532,11 +545,7 @@ export class SuiWormholeContract extends WormholeContract {
       id: this.stateId,
       options: { showContent: true },
     });
-    if (
-      !result.data ||
-      !result.data.content ||
-      result.data.content.dataType !== "moveObject"
-    )
+    if (!result.data?.content || result.data.content.dataType !== "moveObject")
       throw new Error("Unable to fetch pyth state object");
     return result.data.content.fields;
   }
@@ -544,9 +553,8 @@ export class SuiWormholeContract extends WormholeContract {
   /**
    * Given a transaction block and a keypair, sign and execute it
    * Sets the gas budget to 2x the estimated gas cost
-   * @param tx
-   * @param keypair
-   * @private
+   * @param tx - the transaction
+   * @param keypair - the keypair
    */
   private async executeTransaction(tx: Transaction, keypair: Ed25519Keypair) {
     const provider = this.chain.getProvider();
@@ -563,5 +571,156 @@ export class SuiWormholeContract extends WormholeContract {
         showEvents: true,
       },
     });
+  }
+}
+
+export class SuiLazerContract extends Storable {
+  static type = "SuiLazerContract";
+
+  constructor(
+    public readonly chain: SuiChain,
+    public readonly stateId: string,
+    public readonly wormholeStateId: string,
+  ) {
+    super();
+  }
+
+  getId(): string {
+    return `${this.chain.getId()}_${this.stateId}`;
+  }
+
+  getType(): string {
+    return SuiLazerContract.type;
+  }
+
+  toJson() {
+    return {
+      chain: this.chain.getId(),
+      stateId: this.stateId,
+      wormholeStateId: this.wormholeStateId,
+      type: SuiLazerContract.type,
+    };
+  }
+
+  static fromJson(
+    chain: Chain,
+    parsed: { type: string; stateId: string; wormholeStateId: string },
+  ): SuiLazerContract {
+    if (parsed.type !== SuiLazerContract.type) {
+      throw new Error("Invalid type");
+    }
+    return new SuiLazerContract(
+      chain as SuiChain,
+      parsed.stateId,
+      parsed.wormholeStateId,
+    );
+  }
+
+  async executeGovernanceProposals(
+    signer: Ed25519Keypair,
+    chain: SuiChain,
+    vault: Vault,
+    packagePath: string,
+    since?: number,
+    // support overriding outside of CLI
+    console_: Pick<Console, "info" | "warn"> = console,
+  ) {
+    const client = chain.getProvider();
+    const emitterKey = await vault.getEmitter();
+
+    if (since === undefined) {
+      console_.info("Fetching last seen sequence ID...");
+
+      const { seen_sequence } = await chain.getStateGovernanceInfo(
+        client,
+        this.stateId,
+      );
+
+      if (seen_sequence >= BigInt(Number.MAX_SAFE_INTEGER)) {
+        throw new Error("'seen_sequence' bigger than JS integer");
+      }
+
+      since = Number(seen_sequence);
+    }
+
+    for (let i = since; ; i++) {
+      const vaaRef = new SubmittedWormholeMessage(emitterKey, i, vault.cluster);
+      let vaa: Uint8Array;
+      try {
+        vaa = await vaaRef.fetchVaa();
+      } catch {
+        console_.warn(`Could not find VAA #${i.toString()}, ending.`);
+        break;
+      }
+      const action = decodeGovernancePayload(parseVaa(vaa).payload);
+      if (!action) {
+        console_.warn(
+          `Could not parse VAA #${i.toString()} action, skipping...`,
+        );
+        continue;
+      }
+
+      if (action.targetChainId !== chain.wormholeChainName) {
+        console_.warn(
+          `Expected chain '${chain.wormholeChainName}',`,
+          `VAA #${i.toString()} targets '${action.targetChainId}', skipping... `,
+        );
+        continue;
+      }
+      if (action instanceof UpgradeSuiLazerContract) {
+        console_.info(
+          `Attempting contract upgrade to version ${action.version.toString()}...`,
+        );
+        console_.info("  (will fail if not on correct source version)");
+        const meta = await this.fetchAndBumpMeta(chain, packagePath);
+        const pkg = await chain.buildPackage(packagePath);
+        const digest = await chain.upgradeLazerContract({
+          stateId: this.stateId,
+          wormholeStateId: this.wormholeStateId,
+          pkg,
+          meta,
+          vaa,
+          signer,
+        });
+        console_.info(
+          `  Transaction finished: ${chain.explorerUrl("txblock", digest)}`,
+        );
+      } else if (action instanceof UpdateTrustedSigner264Bit) {
+        console_.info(`Updating trusted signer ${action.publicKey}...`);
+        const digest = await chain.updateTrustedSigner({
+          stateId: this.stateId,
+          wormholeStateId: this.wormholeStateId,
+          vaa,
+          signer,
+        });
+        console_.info(
+          `  Transaction finished: ${chain.explorerUrl("txblock", digest)}`,
+        );
+      } else {
+        console_.warn(
+          `Unknown governance action in VAA #${i.toString()}, skipping...`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Bumps contract version in source based on on-chain version and returns new
+   * contract metadata.
+   */
+  async fetchAndBumpMeta(
+    chain: SuiChain,
+    packagePath: string,
+  ): Promise<SuiLazerMeta> {
+    const { version } = await chain.getStatePackageInfo(
+      chain.getProvider(),
+      this.stateId,
+    );
+    const meta = {
+      version: (BigInt(version) + 1n).toString(),
+      receiver_chain_id: chain.getWormholeChainId(),
+    };
+    await chain.updateLazerMeta(packagePath, meta);
+    return meta;
   }
 }

@@ -3,7 +3,7 @@ use {
         api::{self, ApiBlockChainState, BlockchainState, ChainId},
         chain::ethereum::InstrumentedPythContract,
         command::register_provider::CommitmentMetadata,
-        config::{Commitment, Config, EthereumConfig, ProviderConfig, RunOptions},
+        config::{Commitment, Config, EthereumConfig, KeeperConfig, ProviderConfig, RunOptions},
         eth_utils::traced_client::RpcMetrics,
         history::History,
         keeper::{self, keeper_metrics::KeeperMetrics},
@@ -28,6 +28,7 @@ pub async fn run_api(
     chains: Arc<RwLock<HashMap<String, ApiBlockChainState>>>,
     metrics_registry: Arc<RwLock<Registry>>,
     history: Arc<History>,
+    config: &Config,
     mut rx_exit: watch::Receiver<bool>,
 ) -> Result<()> {
     #[derive(OpenApi)]
@@ -50,11 +51,15 @@ pub async fn run_api(
     ),
     tags(
     (name = "fortuna", description = "Random number service for the Pyth Entropy protocol")
+    ),
+    servers(
+        (url = "https://fortuna.dourolabs.app", description = "Default Provider for mainnet chains"),
+        (url = "https://fortuna-staging.dourolabs.app", description = "Default Provider for testnet chains")
     )
     )]
     struct ApiDoc;
 
-    let api_state = api::ApiState::new(chains, metrics_registry, history).await;
+    let api_state = api::ApiState::new(chains, metrics_registry, history, config).await;
 
     // Initialize Axum Router. Note the type here is a `Router<State>` due to the use of the
     // `with_state` method which replaces `Body` with `State` in the type signature.
@@ -84,6 +89,8 @@ pub async fn run_api(
 }
 
 pub async fn run(opts: &RunOptions) -> Result<()> {
+    // Load environment variables from a .env file if present
+    let _ = dotenv::dotenv().map_err(|e| anyhow!("Failed to load .env file: {}", e))?;
     let config = Config::load(&opts.config.config)?;
     let secret = config.provider.secret.load()?.ok_or(anyhow!(
         "Please specify a provider secret in the config file."
@@ -94,10 +101,12 @@ pub async fn run(opts: &RunOptions) -> Result<()> {
 
     let keeper_metrics: Arc<KeeperMetrics> =
         Arc::new(KeeperMetrics::new(metrics_registry.clone()).await);
+
     let keeper_private_key_option = config.keeper.private_key.load()?;
     if keeper_private_key_option.is_none() {
         tracing::info!("Not starting keeper service: no keeper private key specified. Please add one to the config if you would like to run the keeper service.")
     }
+
     let chains: Arc<RwLock<HashMap<ChainId, ApiBlockChainState>>> = Arc::new(RwLock::new(
         config
             .chains
@@ -115,14 +124,20 @@ pub async fn run(opts: &RunOptions) -> Result<()> {
         let rpc_metrics = rpc_metrics.clone();
         let provider_config = config.provider.clone();
         let history = history.clone();
+        let keeper_config_base = config.keeper.clone();
         spawn(async move {
             loop {
+                let keeper_config = if keeper_private_key_option.is_some() {
+                    Some(keeper_config_base.clone())
+                } else {
+                    None
+                };
                 let setup_result = setup_chain_and_run_keeper(
                     provider_config.clone(),
                     &chain_id,
                     chain_config.clone(),
                     keeper_metrics.clone(),
-                    keeper_private_key_option.clone(),
+                    keeper_config,
                     chains.clone(),
                     &secret_copy,
                     history.clone(),
@@ -160,6 +175,7 @@ pub async fn run(opts: &RunOptions) -> Result<()> {
         chains.clone(),
         metrics_registry.clone(),
         history,
+        &config,
         rx_exit,
     )
     .await?;
@@ -172,7 +188,7 @@ async fn setup_chain_and_run_keeper(
     chain_id: &ChainId,
     chain_config: EthereumConfig,
     keeper_metrics: Arc<KeeperMetrics>,
-    keeper_private_key_option: Option<String>,
+    keeper_config: Option<KeeperConfig>,
     chains: Arc<RwLock<HashMap<ChainId, ApiBlockChainState>>>,
     secret_copy: &str,
     history: Arc<History>,
@@ -192,9 +208,9 @@ async fn setup_chain_and_run_keeper(
         chain_id.clone(),
         ApiBlockChainState::Initialized(state.clone()),
     );
-    if let Some(keeper_private_key) = keeper_private_key_option {
+    if let Some(keeper_config) = keeper_config {
         keeper::run_keeper_threads(
-            keeper_private_key,
+            keeper_config,
             chain_config,
             state,
             keeper_metrics.clone(),
@@ -232,7 +248,7 @@ async fn setup_chain_state(
     });
 
     let provider_info = contract
-        .get_provider_info(*provider)
+        .get_provider_info_v2(*provider)
         .call()
         .await
         .map_err(|e| anyhow!("Failed to get provider info: {}", e))?;

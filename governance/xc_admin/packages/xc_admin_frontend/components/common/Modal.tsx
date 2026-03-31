@@ -1,19 +1,25 @@
+/* eslint-disable @typescript-eslint/no-deprecated */
+/* eslint-disable react/prop-types */
 import { Dialog, Transition } from '@headlessui/react'
-import { Dispatch, Fragment, SetStateAction } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
+import { Fragment } from 'react'
+
 import CloseIcon from '../icons/CloseIcon'
 
 const Modal: React.FC<{
   isModalOpen: boolean
   setIsModalOpen: Dispatch<SetStateAction<boolean>>
   closeModal: () => void
-  content: any // eslint-disable-line @typescript-eslint/no-explicit-any
+  content: any
 }> = ({ isModalOpen, setIsModalOpen, closeModal, content }) => {
   return (
     <Transition appear show={isModalOpen} as={Fragment}>
       <Dialog
         as="div"
         className="relative z-40"
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+        }}
       >
         <Transition.Child
           as={Fragment}

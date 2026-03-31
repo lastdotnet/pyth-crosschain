@@ -35,10 +35,10 @@ pub struct KeeperMetrics {
     pub requests_processed_success: Family<AccountLabel, Counter>,
     pub requests_processed_failure: Family<AccountLabel, Counter>,
     pub requests_reprocessed: Family<AccountLabel, Counter>,
+    pub request_failovers_triggered: Family<AccountLabel, Counter>,
     pub reveals: Family<AccountLabel, Counter>,
     pub request_duration_ms: Family<AccountLabel, Histogram>,
     pub retry_count: Family<AccountLabel, Histogram>,
-    pub final_gas_multiplier: Family<AccountLabel, Histogram>,
     pub final_fee_multiplier: Family<AccountLabel, Histogram>,
     pub gas_price_estimate: Family<AccountLabel, Gauge<f64, AtomicU64>>,
     pub highest_revealed_sequence_number: Family<AccountLabel, Gauge>,
@@ -67,6 +67,7 @@ impl Default for KeeperMetrics {
             requests_processed_success: Family::default(),
             requests_processed_failure: Family::default(),
             requests_reprocessed: Family::default(),
+            request_failovers_triggered: Family::default(),
             reveals: Family::default(),
             request_duration_ms: Family::new_with_constructor(|| {
                 Histogram::new(vec![
@@ -76,9 +77,6 @@ impl Default for KeeperMetrics {
             }),
             retry_count: Family::new_with_constructor(|| {
                 Histogram::new(vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 15.0, 20.0])
-            }),
-            final_gas_multiplier: Family::new_with_constructor(|| {
-                Histogram::new(vec![100.0, 125.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0])
             }),
             final_fee_multiplier: Family::new_with_constructor(|| {
                 Histogram::new(vec![100.0, 110.0, 120.0, 140.0, 160.0, 180.0, 200.0])
@@ -191,6 +189,12 @@ impl KeeperMetrics {
         );
 
         writable_registry.register(
+            "request_failovers_triggered",
+            "Number of requests where backup replica attemped to fulfill the request",
+            keeper_metrics.request_failovers_triggered.clone(),
+        );
+
+        writable_registry.register(
             "request_duration_ms",
             "Time taken to process each successful callback request in milliseconds",
             keeper_metrics.request_duration_ms.clone(),
@@ -200,12 +204,6 @@ impl KeeperMetrics {
             "retry_count",
             "Number of retries for successful transactions",
             keeper_metrics.retry_count.clone(),
-        );
-
-        writable_registry.register(
-            "final_gas_multiplier",
-            "Final gas multiplier percentage for successful transactions",
-            keeper_metrics.final_gas_multiplier.clone(),
         );
 
         writable_registry.register(
@@ -307,10 +305,12 @@ impl KeeperMetrics {
             .requests_processed_failure
             .get_or_create(&account_label);
         let _ = self.requests_reprocessed.get_or_create(&account_label);
+        let _ = self
+            .request_failovers_triggered
+            .get_or_create(&account_label);
         let _ = self.reveals.get_or_create(&account_label);
         let _ = self.request_duration_ms.get_or_create(&account_label);
         let _ = self.retry_count.get_or_create(&account_label);
-        let _ = self.final_gas_multiplier.get_or_create(&account_label);
         let _ = self.final_fee_multiplier.get_or_create(&account_label);
         let _ = self.gas_price_estimate.get_or_create(&account_label);
     }

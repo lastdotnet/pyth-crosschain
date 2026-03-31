@@ -1,0 +1,1430 @@
+[
+  {
+    "id": "linea_goerli",
+    "mainnet": false,
+    "networkId": 59140,
+    "rpcUrl": "https://rpc.goerli.linea.build",
+    "type": "EvmChain"
+  },
+  {
+    "id": "linea_sepolia",
+    "mainnet": false,
+    "networkId": 59141,
+    "rpcUrl": "https://rpc.sepolia.linea.build",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kava",
+    "mainnet": true,
+    "networkId": 2222,
+    "rpcUrl": "https://kava-evm.publicnode.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "evmos",
+    "mainnet": true,
+    "nativeToken": "EVMOS",
+    "networkId": 9001,
+    "rpcUrl": "https://evmos-evm.publicnode.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "canto",
+    "mainnet": true,
+    "networkId": 7700,
+    "rpcUrl": "https://canto.slingshot.finance",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fuji",
+    "mainnet": false,
+    "networkId": 43113,
+    "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "avalanche",
+    "mainnet": true,
+    "networkId": 43114,
+    "rpcUrl": "https://api.avax.network/ext/bc/C/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "cronos_testnet",
+    "mainnet": false,
+    "networkId": 338,
+    "rpcUrl": "https://evm-t3.cronos.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "canto_testnet",
+    "mainnet": false,
+    "networkId": 7701,
+    "rpcUrl": "https://canto-testnet.plexnode.wtf",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polygon_zkevm_testnet",
+    "mainnet": false,
+    "networkId": 1442,
+    "rpcUrl": "https://rpc.public.zkevm-test.net",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polygon_blackberry",
+    "mainnet": false,
+    "networkId": 94204209,
+    "rpcUrl": "https://rpc.polygon-blackberry.gelato.digital",
+    "type": "EvmChain"
+  },
+  {
+    "id": "aurora_testnet",
+    "mainnet": false,
+    "networkId": 1313161555,
+    "rpcUrl": "https://testnet.aurora.dev",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mantle_sepolia",
+    "mainnet": false,
+    "networkId": 5003,
+    "rpcUrl": "https://rpc.sepolia.mantle.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "gnosis",
+    "mainnet": true,
+    "nativeToken": "DAI",
+    "networkId": 100,
+    "rpcUrl": "https://rpc.gnosischain.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fantom_testnet",
+    "mainnet": false,
+    "networkId": 4002,
+    "rpcUrl": "https://fantom.api.onfinality.io/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "neon",
+    "mainnet": true,
+    "networkId": 245022934,
+    "rpcUrl": "https://neon-evm.drpc.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fantom",
+    "mainnet": true,
+    "networkId": 250,
+    "rpcUrl": "https://rpc.ankr.com/fantom",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mumbai",
+    "mainnet": false,
+    "networkId": 80001,
+    "rpcUrl": "https://polygon-mumbai.api.onfinality.io/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "neon_devnet",
+    "mainnet": false,
+    "networkId": 245022926,
+    "rpcUrl": "https://devnet.neonevm.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "meter",
+    "mainnet": true,
+    "networkId": 82,
+    "rpcUrl": "https://meter.blockpi.network/v1/rpc/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "chiado",
+    "mainnet": false,
+    "networkId": 10200,
+    "rpcUrl": "https://rpc.chiadochain.net",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mantle",
+    "mainnet": true,
+    "nativeToken": "MNT",
+    "networkId": 5000,
+    "rpcUrl": "https://rpc.mantle.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kava_testnet",
+    "mainnet": false,
+    "networkId": 2221,
+    "rpcUrl": "https://evm.testnet.kava.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "evmos_testnet",
+    "mainnet": false,
+    "networkId": 9000,
+    "rpcUrl": "https://jsonrpc-evmos-testnet.mzonder.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "cronos",
+    "mainnet": true,
+    "networkId": 25,
+    "rpcUrl": "https://cronosrpc-1.xstaking.sg",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethereum",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 1,
+    "rpcUrl": "https://eth.llamarpc.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bsc_testnet",
+    "mainnet": false,
+    "networkId": 97,
+    "rpcUrl": "https://rpc.ankr.com/bsc_testnet_chapel",
+    "type": "EvmChain"
+  },
+  {
+    "id": "wemix",
+    "mainnet": true,
+    "networkId": 1111,
+    "rpcUrl": "https://api.wemix.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "aurora",
+    "mainnet": true,
+    "nativeToken": "NEAR",
+    "networkId": 1313161554,
+    "rpcUrl": "https://mainnet.aurora.dev",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bsc",
+    "mainnet": true,
+    "nativeToken": "BNB",
+    "networkId": 56,
+    "rpcUrl": "https://public-bsc-mainnet.fastnode.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "eos",
+    "mainnet": true,
+    "networkId": 17777,
+    "rpcUrl": "https://api.evm.eosnetwork.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "conflux_espace_testnet",
+    "mainnet": false,
+    "networkId": 71,
+    "rpcUrl": "https://evmtestnet.confluxrpc.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "conflux_espace",
+    "mainnet": true,
+    "networkId": 1030,
+    "rpcUrl": "https://evm.confluxrpc.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "celo",
+    "mainnet": true,
+    "networkId": 42220,
+    "rpcUrl": "https://forno.celo.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polygon",
+    "mainnet": true,
+    "nativeToken": "POL",
+    "networkId": 137,
+    "rpcUrl": "https://poly.api.pocket.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "wemix_testnet",
+    "mainnet": false,
+    "networkId": 1112,
+    "rpcUrl": "https://api.test.wemix.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kcc",
+    "mainnet": true,
+    "nativeToken": "KCS",
+    "networkId": 321,
+    "rpcUrl": "https://rpc-mainnet.kcc.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polygon_zkevm",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 1101,
+    "rpcUrl": "https://zkevm-rpc.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "celo_alfajores_testnet",
+    "mainnet": false,
+    "networkId": 44787,
+    "rpcUrl": "https://alfajores-forno.celo-testnet.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "syndr_nitro_testnet",
+    "mainnet": false,
+    "networkId": 412346,
+    "rpcUrl": "https://syndr-nitro-testnet.calderachain.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zksync",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 324,
+    "rpcUrl": "https://zksync2-mainnet.zksync.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "base",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 8453,
+    "rpcUrl": "https://developer-access-mainnet.base.org/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "arbitrum",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 42161,
+    "rpcUrl": "https://arb1.arbitrum.io/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "optimism",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 10,
+    "rpcUrl": "https://mainnet.optimism.io/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kcc_testnet",
+    "mainnet": false,
+    "networkId": 322,
+    "rpcUrl": "https://rpc-testnet.kcc.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "eos_testnet",
+    "mainnet": false,
+    "networkId": 15557,
+    "rpcUrl": "https://api.testnet.evm.eosnetwork.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "meter_testnet",
+    "mainnet": false,
+    "networkId": 83,
+    "rpcUrl": "https://rpctest.meter.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "linea",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 59144,
+    "rpcUrl": "https://linea.rpc.thirdweb.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "shimmer_testnet",
+    "mainnet": false,
+    "networkId": 1073,
+    "rpcUrl": "https://json-rpc.evm.testnet.shimmer.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "scroll_sepolia",
+    "mainnet": false,
+    "networkId": 534351,
+    "rpcUrl": "https://sepolia-rpc.scroll.io/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "scroll",
+    "mainnet": true,
+    "networkId": 534352,
+    "rpcUrl": "https://rpc.scroll.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "saigon",
+    "mainnet": false,
+    "networkId": 2021,
+    "rpcUrl": "https://api-gateway.skymavis.com/rpc/testnet?apikey=$ENV_RONIN_API_KEY",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ronin",
+    "mainnet": true,
+    "networkId": 2020,
+    "rpcUrl": "https://api-gateway.skymavis.com/rpc?apikey=$ENV_RONIN_API_KEY",
+    "type": "EvmChain"
+  },
+  {
+    "id": "horizen_eon",
+    "mainnet": true,
+    "networkId": 7332,
+    "rpcUrl": "https://rpc.ankr.com/horizen_eon",
+    "type": "EvmChain"
+  },
+  {
+    "id": "horizen_gobi",
+    "mainnet": false,
+    "networkId": 1663,
+    "rpcUrl": "https://rpc.ankr.com/horizen_gobi_testnet",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sepolia",
+    "mainnet": false,
+    "networkId": 11155111,
+    "rpcUrl": "https://sepolia.drpc.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "shimmer",
+    "mainnet": true,
+    "networkId": 148,
+    "rpcUrl": "https://json-rpc.evm.shimmer.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "arbitrum_sepolia",
+    "mainnet": false,
+    "networkId": 421614,
+    "rpcUrl": "https://sepolia-rollup.arbitrum.io/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "arbitrum_blueberry",
+    "mainnet": false,
+    "networkId": 88153591557,
+    "rpcUrl": "https://rpc.arb-blueberry.gelato.digital",
+    "type": "EvmChain"
+  },
+  {
+    "id": "boba",
+    "mainnet": true,
+    "networkId": 288,
+    "rpcUrl": "https://replica.boba.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "boba_goerli",
+    "mainnet": false,
+    "networkId": 2888,
+    "rpcUrl": "https://goerli.boba.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "boba_sepolia",
+    "mainnet": false,
+    "networkId": 28882,
+    "rpcUrl": "https://sepolia.boba.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "manta",
+    "mainnet": true,
+    "networkId": 169,
+    "rpcUrl": "https://pacific-rpc.manta.network/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "manta_testnet",
+    "mainnet": false,
+    "networkId": 3441005,
+    "rpcUrl": "https://manta-pacific-testnet.drpc.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "manta_sepolia",
+    "mainnet": false,
+    "networkId": 3441006,
+    "rpcUrl": "https://manta-sepolia.rpc.caldera.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "optimism_sepolia",
+    "mainnet": false,
+    "networkId": 11155420,
+    "rpcUrl": "https://sepolia.optimism.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "optimism_celestia_raspberry",
+    "mainnet": false,
+    "networkId": 123420111,
+    "rpcUrl": "https://rpc.opcelestia-raspberry.gelato.digital",
+    "type": "EvmChain"
+  },
+  {
+    "id": "chiliz_spicy",
+    "mainnet": false,
+    "networkId": 88882,
+    "rpcUrl": "https://spicy-rpc.chiliz.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "chiliz",
+    "mainnet": true,
+    "networkId": 88888,
+    "rpcUrl": "https://rpc.ankr.com/chiliz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zetachain_testnet",
+    "mainnet": false,
+    "networkId": 7001,
+    "rpcUrl": "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zetachain",
+    "mainnet": true,
+    "networkId": 7000,
+    "rpcUrl": "https://zetachain-evm.blockpi.network/v1/rpc/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "astar_zkevm_testnet",
+    "mainnet": false,
+    "networkId": 1261120,
+    "rpcUrl": "https://rpc.zkatana.gelato.digital",
+    "type": "EvmChain"
+  },
+  {
+    "id": "astar_zkyoto_testnet",
+    "mainnet": false,
+    "networkId": 6038361,
+    "rpcUrl": "https://rpc.startale.com/zkyoto",
+    "type": "EvmChain"
+  },
+  {
+    "id": "astar_zkevm",
+    "mainnet": true,
+    "networkId": 3776,
+    "rpcUrl": "https://rpc.startale.com/astar-zkevm",
+    "type": "EvmChain"
+  },
+  {
+    "id": "coredao_testnet",
+    "mainnet": false,
+    "networkId": 1115,
+    "rpcUrl": "https://rpc.test.btcs.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "coredao",
+    "mainnet": true,
+    "nativeToken": "CORE",
+    "networkId": 1116,
+    "rpcUrl": "https://rpc.coredao.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "viction",
+    "mainnet": true,
+    "networkId": 88,
+    "rpcUrl": "https://viction.blockpi.network/v1/rpc/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "viction_testnet",
+    "mainnet": false,
+    "networkId": 89,
+    "rpcUrl": "https://rpc-testnet.viction.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mode_testnet",
+    "mainnet": false,
+    "networkId": 919,
+    "rpcUrl": "https://sepolia.mode.network/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mode",
+    "mainnet": true,
+    "nativeToken": "MODE",
+    "networkId": 34443,
+    "rpcUrl": "https://mainnet.mode.network/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bttc_testnet",
+    "mainnet": false,
+    "networkId": 1029,
+    "rpcUrl": "https://pre-rpc.bt.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bttc",
+    "mainnet": true,
+    "nativeToken": "BTT",
+    "networkId": 199,
+    "rpcUrl": "https://rpc.bt.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zksync_sepolia",
+    "mainnet": false,
+    "networkId": 300,
+    "rpcUrl": "https://sepolia.era.zksync.dev/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "base_sepolia",
+    "mainnet": false,
+    "networkId": 84532,
+    "rpcUrl": "https://sepolia.base.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "movement_evm_devnet",
+    "mainnet": false,
+    "networkId": 336,
+    "rpcUrl": "https://mevm.devnet.m1.movementlabs.xyz/v1",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zkfair_testnet",
+    "mainnet": false,
+    "networkId": 43851,
+    "rpcUrl": "https://testnet-rpc.zkfair.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zkfair",
+    "mainnet": true,
+    "networkId": 42766,
+    "rpcUrl": "https://rpc.zkfair.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "blast_s2_testnet",
+    "mainnet": false,
+    "networkId": 168587773,
+    "rpcUrl": "https://sepolia.blast.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hedera_testnet",
+    "mainnet": false,
+    "networkId": 296,
+    "rpcUrl": "https://testnet.hashio.io/api",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hedera",
+    "mainnet": true,
+    "nativeToken": "HBAR",
+    "networkId": 295,
+    "rpcUrl": "https://mainnet.hashio.io/api",
+    "type": "EvmChain"
+  },
+  {
+    "id": "filecoin_calibration",
+    "mainnet": false,
+    "networkId": 314159,
+    "rpcUrl": "https://rpc.ankr.com/filecoin_testnet",
+    "type": "EvmChain"
+  },
+  {
+    "id": "filecoin",
+    "mainnet": true,
+    "networkId": 314,
+    "rpcUrl": "https://rpc.ankr.com/filecoin",
+    "type": "EvmChain"
+  },
+  {
+    "id": "lightlink_pegasus_testnet",
+    "mainnet": false,
+    "networkId": 1891,
+    "rpcUrl": "https://replicator.pegasus.lightlink.io/rpc/v1",
+    "type": "EvmChain"
+  },
+  {
+    "id": "lightlink_phoenix",
+    "mainnet": true,
+    "networkId": 1890,
+    "rpcUrl": "https://replicator.phoenix.lightlink.io/rpc/v1",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sei_evm_testnet",
+    "mainnet": false,
+    "networkId": 1328,
+    "rpcUrl": "https://evm-rpc-testnet.sei-apis.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "dela_deperp_testnet",
+    "mainnet": false,
+    "networkId": 9393,
+    "rpcUrl": "https://sepolia-dela.deperp.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "idex_xchain_testnet",
+    "mainnet": false,
+    "networkId": 64002,
+    "rpcUrl": "https://xchain-testnet-rpc.idex.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "injective_inevm_testnet",
+    "mainnet": false,
+    "networkId": 2424,
+    "rpcUrl": "https://inevm-testnet.rpc.caldera.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "injective_inevm",
+    "mainnet": true,
+    "networkId": 2525,
+    "rpcUrl": "https://inevm.calderachain.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "blast",
+    "mainnet": true,
+    "nativeToken": "ETH",
+    "networkId": 81457,
+    "rpcUrl": "https://rpc.blast.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "merlin_testnet",
+    "mainnet": false,
+    "networkId": 686868,
+    "rpcUrl": "https://testnet-rpc.merlinchain.io/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "merlin",
+    "mainnet": true,
+    "networkId": 4200,
+    "rpcUrl": "https://rpc.merlinchain.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "parallel_testnet",
+    "mainnet": false,
+    "networkId": 9659,
+    "rpcUrl": "https://rpc-accused-coffee-koala-b9fn1dik76.t.conduit.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "parallel",
+    "mainnet": true,
+    "networkId": 1024,
+    "rpcUrl": "https://rpc.parallel.fi/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polynomial_testnet",
+    "mainnet": false,
+    "networkId": 80008,
+    "rpcUrl": "https://rpc.sepolia.polynomial.fi",
+    "type": "EvmChain"
+  },
+  {
+    "id": "morph_testnet",
+    "mainnet": false,
+    "networkId": 2710,
+    "rpcUrl": "https://rpc-testnet.morphl2.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "iota",
+    "mainnet": true,
+    "networkId": 8822,
+    "rpcUrl": "https://json-rpc.evm.iotaledger.net",
+    "type": "EvmChain"
+  },
+  {
+    "id": "olive_testnet",
+    "mainnet": false,
+    "networkId": 8101902,
+    "rpcUrl": "https://olive-network-testnet.rpc.caldera.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "taiko_hekla",
+    "mainnet": false,
+    "nativeToken": "ETH",
+    "networkId": 167009,
+    "rpcUrl": "https://rpc.hekla.taiko.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "orange_testnet",
+    "mainnet": false,
+    "networkId": 987,
+    "rpcUrl": "https://subnets.avax.network/orangetest/testnet/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polygon_amoy",
+    "mainnet": false,
+    "networkId": 80002,
+    "rpcUrl": "https://polygon-amoy-bor-rpc.publicnode.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "taiko_mainnet",
+    "mainnet": true,
+    "networkId": 167000,
+    "rpcUrl": "https://rpc.mainnet.taiko.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sei_evm_mainnet",
+    "mainnet": true,
+    "networkId": 1329,
+    "rpcUrl": "https://evm-rpc.sei-apis.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "dela_mithreum_deperp_testnet",
+    "mainnet": false,
+    "networkId": 33612,
+    "rpcUrl": "https://mithreum-rpc-sepolia.deperp.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kakarot_sepolia",
+    "mainnet": false,
+    "networkId": 920637907288165,
+    "rpcUrl": "https://rpc-kakarot-sepolia.karnot.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "opbnb",
+    "mainnet": true,
+    "nativeToken": "BNB",
+    "networkId": 204,
+    "rpcUrl": "https://opbnb-mainnet-rpc.bnbchain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "opbnb_testnet",
+    "mainnet": false,
+    "networkId": 5611,
+    "rpcUrl": "https://opbnb-testnet-rpc.bnbchain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "gravity",
+    "mainnet": true,
+    "networkId": 1625,
+    "rpcUrl": "https://rpc.gravity.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "etherlink_testnet",
+    "mainnet": false,
+    "networkId": 128123,
+    "rpcUrl": "https://node.ghostnet.etherlink.com/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "polynomial",
+    "mainnet": true,
+    "networkId": 8008,
+    "rpcUrl": "https://rpc.polynomial.fi/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "etherlink",
+    "mainnet": true,
+    "networkId": 42793,
+    "rpcUrl": "https://node.mainnet.etherlink.com/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kaia",
+    "mainnet": true,
+    "networkId": 8217,
+    "rpcUrl": "https://rpc.ankr.com/klaytn",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kaia_testnet",
+    "mainnet": false,
+    "networkId": 1001,
+    "rpcUrl": "https://rpc.ankr.com/klaytn_testnet",
+    "type": "EvmChain"
+  },
+  {
+    "id": "morph_holesky_testnet",
+    "mainnet": false,
+    "networkId": 2810,
+    "rpcUrl": "https://rpc-holesky.morphl2.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "tabi_testnet",
+    "mainnet": false,
+    "networkId": 9788,
+    "rpcUrl": "https://rpc.testnetv2.tabichain.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "b3_testnet",
+    "mainnet": false,
+    "networkId": 1993,
+    "rpcUrl": "https://sepolia.b3.fun/http/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kinto",
+    "mainnet": true,
+    "networkId": 7887,
+    "rpcUrl": "https://rpc.kinto-rpc.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "cronos_zkevm_testnet",
+    "mainnet": false,
+    "networkId": 240,
+    "rpcUrl": "https://testnet.zkevm.cronos.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "reya_testnet",
+    "mainnet": false,
+    "networkId": 89346162,
+    "rpcUrl": "https://rpc.reya-cronos.gelato.digital",
+    "type": "EvmChain"
+  },
+  {
+    "id": "b3_mainnet",
+    "mainnet": true,
+    "networkId": 8333,
+    "rpcUrl": "https://mainnet-rpc.b3.fun/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "cronos_zkevm_mainnet",
+    "mainnet": true,
+    "networkId": 388,
+    "rpcUrl": "https://mainnet.zkevm.cronos.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "movement_evm_devnet_imola",
+    "mainnet": false,
+    "networkId": 30732,
+    "rpcUrl": "https://mevm.devnet.imola.movementlabs.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "flow_testnet",
+    "mainnet": false,
+    "networkId": 545,
+    "rpcUrl": "https://testnet.evm.nodes.onflow.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "idex_xchain_mainnet",
+    "mainnet": true,
+    "networkId": 94524,
+    "rpcUrl": "https://xchain-rpc.idex.io/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "apechain_testnet",
+    "mainnet": false,
+    "networkId": 33111,
+    "rpcUrl": "https://curtis.rpc.caldera.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "soneium_minato_testnet",
+    "mainnet": false,
+    "networkId": 1946,
+    "rpcUrl": "https://rpc.minato.soneium.org/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "apechain_mainnet",
+    "mainnet": true,
+    "networkId": 33139,
+    "rpcUrl": "https://apechain.calderachain.xyz/http",
+    "type": "EvmChain"
+  },
+  {
+    "id": "flow_mainnet",
+    "mainnet": true,
+    "networkId": 747,
+    "rpcUrl": "https://mainnet.evm.nodes.onflow.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "abstract_testnet",
+    "mainnet": false,
+    "networkId": 11124,
+    "rpcUrl": "https://api.testnet.abs.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sanko",
+    "mainnet": true,
+    "networkId": 1996,
+    "rpcUrl": "https://mainnet.sanko.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sanko_testnet",
+    "mainnet": false,
+    "networkId": 1992,
+    "rpcUrl": "https://sanko-arb-sepolia.rpc.caldera.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "unichain_sepolia",
+    "mainnet": false,
+    "networkId": 1301,
+    "rpcUrl": "https://sepolia.unichain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "skate",
+    "mainnet": true,
+    "networkId": 5050,
+    "rpcUrl": "https://rpc.skatechain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "skate_testnet",
+    "mainnet": false,
+    "networkId": 5051,
+    "rpcUrl": "https://nollie-rpc.skatechain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "morph",
+    "mainnet": true,
+    "networkId": 2818,
+    "rpcUrl": "https://rpc.morphl2.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kraken_ink_testnet",
+    "mainnet": false,
+    "networkId": 763373,
+    "rpcUrl": "https://patient-cool-emerald.ink-sepolia.quiknode.pro/$ENV_KRAKEN_INK_API_KEY",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethena_testnet",
+    "mainnet": false,
+    "networkId": 52085143,
+    "rpcUrl": "https://rpc-ethena-testnet-0.t.conduit.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "superseed_mainnet",
+    "mainnet": true,
+    "networkId": 5330,
+    "rpcUrl": "https://rpc-superseed-mainnet-0.t.conduit.xyz/$ENV_SUPERSEED_API_KEY",
+    "type": "EvmChain"
+  },
+  {
+    "id": "superseed_testnet",
+    "mainnet": false,
+    "networkId": 53302,
+    "rpcUrl": "https://rpc-sepolia-superseed-826s35710w.t.conduit.xyz/$ENV_SUPERSEED_API_KEY",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hemi_mainnet",
+    "mainnet": true,
+    "networkId": 43111,
+    "rpcUrl": "https://7e57304f.rpc.hemi.network/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hyperevm_testnet",
+    "mainnet": false,
+    "networkId": 998,
+    "rpcUrl": "https://rpc.hyperliquid-testnet.xyz/evm",
+    "type": "EvmChain"
+  },
+  {
+    "id": "unichain",
+    "mainnet": true,
+    "networkId": 130,
+    "rpcUrl": "https://mainnet.unichain.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "abstract",
+    "mainnet": true,
+    "networkId": 2741,
+    "rpcUrl": "https://api.mainnet.abs.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "eventum_testnet",
+    "mainnet": false,
+    "networkId": 16182,
+    "rpcUrl": "https://testnet-rpc.eh-dev.app",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sonic_blaze_testnet",
+    "mainnet": false,
+    "networkId": 57054,
+    "rpcUrl": "https://rpc.blaze.soniclabs.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fantom_sonic_mainnet",
+    "mainnet": true,
+    "networkId": 146,
+    "rpcUrl": "https://rpc.soniclabs.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bittensor_testnet",
+    "mainnet": false,
+    "networkId": 945,
+    "rpcUrl": "https://test.finney.opentensor.ai:443",
+    "type": "EvmChain"
+  },
+  {
+    "id": "soneium",
+    "mainnet": true,
+    "networkId": 1868,
+    "rpcUrl": "https://soneium.drpc.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "story_testnet",
+    "mainnet": false,
+    "networkId": 1315,
+    "rpcUrl": "https://aeneid.storyrpc.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "eventum_mainnet",
+    "mainnet": true,
+    "networkId": 161803,
+    "rpcUrl": "https://mainnet-rpc.evedex.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "kraken_ink_mainnet",
+    "mainnet": true,
+    "networkId": 57073,
+    "rpcUrl": "$KRAKEN_INK_RPC_URL",
+    "type": "EvmChain"
+  },
+  {
+    "id": "coredao_testnet_v2",
+    "mainnet": false,
+    "networkId": 1114,
+    "rpcUrl": "https://rpc.test2.btcs.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "monad_testnet",
+    "mainnet": false,
+    "networkId": 10143,
+    "rpcUrl": "https://rpc-testnet.monadinfra.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "berachain_mainnet",
+    "mainnet": true,
+    "networkId": 80094,
+    "rpcUrl": "https://rpc.berachain.com/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "story",
+    "mainnet": true,
+    "networkId": 1514,
+    "rpcUrl": "https://mainnet.storyrpc.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hyperevm",
+    "mainnet": true,
+    "networkId": 999,
+    "rpcUrl": "https://rpc.hyperliquid.xyz/evm",
+    "type": "EvmChain"
+  },
+  {
+    "id": "bittensor_mainnet",
+    "mainnet": true,
+    "networkId": 964,
+    "rpcUrl": "https://bittensor-finney.api.onfinality.io/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "berachain_bepolia",
+    "mainnet": false,
+    "networkId": 80069,
+    "rpcUrl": "https://bepolia.rpc.berachain.com/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "megaeth_testnet",
+    "mainnet": false,
+    "networkId": 6342,
+    "rpcUrl": "https://carrot.megaeth.com/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "converge_testnet",
+    "mainnet": false,
+    "networkId": 52085144,
+    "rpcUrl": "https://rpc-converge-testnet-1.t.conduit.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "worldchain",
+    "mainnet": true,
+    "networkId": 480,
+    "rpcUrl": "https://worldchain-mainnet.g.alchemy.com/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "worldchain_testnet",
+    "mainnet": false,
+    "networkId": 4801,
+    "rpcUrl": "https://worldchain-sepolia.g.alchemy.com/public",
+    "type": "EvmChain"
+  },
+  {
+    "id": "swellchain_testnet",
+    "mainnet": false,
+    "networkId": 1924,
+    "rpcUrl": "https://swell-testnet.alt.technology",
+    "type": "EvmChain"
+  },
+  {
+    "id": "swellchain",
+    "mainnet": true,
+    "networkId": 1923,
+    "rpcUrl": "https://swell-mainnet.alt.technology",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mezo_testnet",
+    "mainnet": false,
+    "networkId": 31611,
+    "rpcUrl": "https://rpc.test.mezo.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "mezo",
+    "mainnet": true,
+    "networkId": 31612,
+    "rpcUrl": "https://jsonrpc-mezo.boar.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hemi_testnet",
+    "mainnet": false,
+    "networkId": 743111,
+    "rpcUrl": "https://testnet.rpc.hemi.network/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "injective_evm_testnet",
+    "mainnet": false,
+    "networkId": 1439,
+    "rpcUrl": "https://k8s.testnet.json-rpc.injective.network/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethereal_testnet",
+    "mainnet": false,
+    "networkId": 657468,
+    "rpcUrl": "https://rpc-ethereal-testnet.t.conduit.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "camp_network",
+    "mainnet": true,
+    "networkId": 484,
+    "rpcUrl": "https://rpc.camp.raas.gelato.cloud",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethereal_devnet",
+    "mainnet": false,
+    "networkId": 13374201,
+    "rpcUrl": "https://rpc-ethereal-devnet-0.t.conduit.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethereal_testnet_v2",
+    "mainnet": false,
+    "networkId": 13374202,
+    "rpcUrl": "https://rpc-ethereal-testnet-0.t.conduit.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fluent_testnet",
+    "mainnet": false,
+    "networkId": 20994,
+    "rpcUrl": "https://rpc.testnet.fluent.xyz/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "monad",
+    "mainnet": true,
+    "networkId": 143,
+    "rpcUrl": "https://rpc-mainnet.monadinfra.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "zero_gravity",
+    "mainnet": true,
+    "networkId": 16661,
+    "rpcUrl": "http://evmrpc.0g.ai/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "giwa_testnet",
+    "mainnet": false,
+    "networkId": 91342,
+    "rpcUrl": "https://sepolia-rpc.giwa.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "ethereal",
+    "mainnet": true,
+    "networkId": 5064014,
+    "rpcUrl": "https://rpc.ethereal.trade",
+    "type": "EvmChain"
+  },
+  {
+    "id": "plasma",
+    "mainnet": true,
+    "networkId": 9745,
+    "rpcUrl": "https://rpc.plasma.to/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "injective_evm",
+    "mainnet": true,
+    "networkId": 1776,
+    "rpcUrl": "https://sentry.evm-rpc.injective.network/",
+    "type": "EvmChain"
+  },
+  {
+    "id": "sonic_evm_testnet",
+    "mainnet": false,
+    "networkId": 14601,
+    "rpcUrl": "https://rpc.testnet.soniclabs.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "etherlink_new_testnet",
+    "mainnet": false,
+    "networkId": 127823,
+    "rpcUrl": "https://node.shadownet.etherlink.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "hoodi",
+    "mainnet": false,
+    "networkId": 560048,
+    "rpcUrl": "https://ethereum-hoodi-rpc.publicnode.com",
+    "type": "EvmChain"
+  },
+  {
+    "id": "taiko_hoodi",
+    "mainnet": false,
+    "networkId": 167013,
+    "rpcUrl": "https://rpc.hoodi.taiko.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "morph_hoodi",
+    "mainnet": false,
+    "networkId": 2910,
+    "rpcUrl": "https://rpc-hoodi.morphl2.io",
+    "type": "EvmChain"
+  },
+  {
+    "id": "orange",
+    "mainnet": true,
+    "networkId": 1510,
+    "rpcUrl": "https://subnets.avax.network/orange/mainnet/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "celo_sepolia_testnet",
+    "mainnet": false,
+    "networkId": 11142220,
+    "rpcUrl": "https://forno.celo-sepolia.celo-testnet.org",
+    "type": "EvmChain"
+  },
+  {
+    "id": "arc_testnet",
+    "mainnet": false,
+    "networkId": 5042002,
+    "rpcUrl": "https://rpc.testnet.arc.network",
+    "type": "EvmChain"
+  },
+  {
+    "id": "tempo_testnet",
+    "mainnet": false,
+    "networkId": 42431,
+    "rpcUrl": "https://rpc.moderato.tempo.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "tempo",
+    "mainnet": true,
+    "networkId": 4217,
+    "rpcUrl": "https://rpc.tempo.xyz",
+    "type": "EvmChain"
+  },
+  {
+    "id": "megaeth",
+    "mainnet": true,
+    "networkId": 4326,
+    "rpcUrl": "https://mainnet.megaeth.com/rpc",
+    "type": "EvmChain"
+  },
+  {
+    "id": "fluent",
+    "mainnet": true,
+    "networkId": 25363,
+    "rpcUrl": "https://rpc.fluent.xyz",
+    "type": "EvmChain"
+  }
+]

@@ -1,5 +1,6 @@
 use {
     super::{
+        token,
         types::{PriceIdInput, RpcPriceFeed},
         ApiState,
     },
@@ -81,10 +82,13 @@ pub enum Status {
 pub struct Labels {
     pub interaction: Interaction,
     pub status: Status,
+    /// Last 4 characters of the API token, or "none" if no token provided
+    pub token_suffix: String,
 }
 
 pub struct WsMetrics {
     pub interactions: Family<Labels, Counter>,
+    pub broadcast_latency: prometheus_client::metrics::histogram::Histogram,
 }
 
 impl WsMetrics {
@@ -95,10 +99,17 @@ impl WsMetrics {
     {
         let new = Self {
             interactions: Family::default(),
+            broadcast_latency: prometheus_client::metrics::histogram::Histogram::new(
+                [
+                    0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0,
+                ]
+                .into_iter(),
+            ),
         };
 
         {
             let interactions = new.interactions.clone();
+            let ws_broadcast_latency = new.broadcast_latency.clone();
 
             tokio::spawn(async move {
                 Metrics::register(
@@ -107,6 +118,16 @@ impl WsMetrics {
                         "ws_interactions",
                         "Total number of websocket interactions",
                         interactions,
+                    ),
+                )
+                .await;
+
+                Metrics::register(
+                    &*state,
+                    (
+                        "ws_broadcast_latency_seconds",
+                        "Latency from Hermes receive_time to WS send in seconds",
+                        ws_broadcast_latency,
                     ),
                 )
                 .await;
@@ -184,6 +205,7 @@ pub async fn ws_route_handler<S>(
     ws: WebSocketUpgrade,
     AxumState(state): AxumState<ApiState<S>>,
     headers: HeaderMap,
+    uri: axum::http::Uri,
 ) -> impl IntoResponse
 where
     S: Aggregates,
@@ -198,13 +220,21 @@ where
         .and_then(|value| value.split(',').next()) // Only take the first ip if there are multiple
         .and_then(|value| value.parse().ok());
 
+    // Extract the token from the request
+    let api_token = token::extract_token_from_headers_and_uri(&headers, &uri);
+    let token_suffix = token::get_token_suffix(api_token.as_deref());
+
     ws.max_message_size(MAX_CLIENT_MESSAGE_SIZE)
-        .on_upgrade(move |socket| websocket_handler(socket, state, requester_ip))
+        .on_upgrade(move |socket| websocket_handler(socket, state, requester_ip, token_suffix))
 }
 
-#[tracing::instrument(skip(stream, state, subscriber_ip))]
-async fn websocket_handler<S>(stream: WebSocket, state: ApiState<S>, subscriber_ip: Option<IpAddr>)
-where
+#[tracing::instrument(skip(stream, state, subscriber_ip, token_suffix))]
+async fn websocket_handler<S>(
+    stream: WebSocket,
+    state: ApiState<S>,
+    subscriber_ip: Option<IpAddr>,
+    token_suffix: String,
+) where
     S: Aggregates,
     S: Send,
 {
@@ -223,6 +253,7 @@ where
         .get_or_create(&Labels {
             interaction: Interaction::NewConnection,
             status: Status::Success,
+            token_suffix: token_suffix.clone(),
         })
         .inc();
 
@@ -231,6 +262,7 @@ where
     let mut subscriber = Subscriber::new(
         id,
         subscriber_ip,
+        token_suffix,
         state.state.clone(),
         state.ws.clone(),
         notify_receiver,
@@ -248,6 +280,7 @@ pub type SubscriberId = usize;
 pub struct Subscriber<S> {
     id: SubscriberId,
     ip_addr: Option<IpAddr>,
+    token_suffix: String,
     closed: bool,
     state: Arc<S>,
     ws_state: Arc<WsState>,
@@ -265,9 +298,14 @@ impl<S> Subscriber<S>
 where
     S: Aggregates,
 {
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "constructor requires all fields for Subscriber"
+    )]
     pub fn new(
         id: SubscriberId,
         ip_addr: Option<IpAddr>,
+        token_suffix: String,
         state: Arc<S>,
         ws_state: Arc<WsState>,
         notify_receiver: Receiver<AggregationEvent>,
@@ -277,6 +315,7 @@ where
         Self {
             id,
             ip_addr,
+            token_suffix,
             closed: false,
             state,
             ws_state,
@@ -322,6 +361,7 @@ where
                         .get_or_create(&Labels {
                             interaction: Interaction::ClientHeartbeat,
                             status: Status::Error,
+                            token_suffix: self.token_suffix.clone(),
                         })
                         .inc();
 
@@ -401,6 +441,13 @@ where
             }
         };
 
+        // Capture the minimum receive_time from the updates batch
+        let min_received_at = updates
+            .price_feeds
+            .iter()
+            .filter_map(|update| update.received_at)
+            .min();
+
         for update in updates.price_feeds {
             let config = self
                 .price_feeds_with_config
@@ -448,6 +495,7 @@ where
                         .get_or_create(&Labels {
                             interaction: Interaction::RateLimit,
                             status: Status::Error,
+                            token_suffix: self.token_suffix.clone(),
                         })
                         .inc();
 
@@ -475,11 +523,27 @@ where
                 .get_or_create(&Labels {
                     interaction: Interaction::PriceUpdate,
                     status: Status::Success,
+                    token_suffix: self.token_suffix.clone(),
                 })
                 .inc();
         }
 
         self.sender.flush().await?;
+
+        // Record latency from receive to ws send after flushing
+        if let Some(min_received_at) = min_received_at {
+            let now_secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs_f64())
+                .unwrap_or(0.0);
+            // Histogram only accepts f64. The conversion is safe (never panics), but very large values lose precision.
+            let latency = now_secs - (min_received_at as f64);
+            self.ws_state
+                .metrics
+                .broadcast_latency
+                .observe(latency.max(0.0));
+        }
+
         Ok(())
     }
 
@@ -498,6 +562,7 @@ where
                     .get_or_create(&Labels {
                         interaction: Interaction::CloseConnection,
                         status: Status::Success,
+                        token_suffix: self.token_suffix.clone(),
                     })
                     .inc();
 
@@ -522,6 +587,7 @@ where
                     .get_or_create(&Labels {
                         interaction: Interaction::ClientHeartbeat,
                         status: Status::Success,
+                        token_suffix: self.token_suffix.clone(),
                     })
                     .inc();
 
@@ -538,6 +604,7 @@ where
                     .get_or_create(&Labels {
                         interaction: Interaction::ClientMessage,
                         status: Status::Error,
+                        token_suffix: self.token_suffix.clone(),
                     })
                     .inc();
                 self.sender
@@ -579,8 +646,7 @@ where
                             serde_json::to_string(&ServerMessage::Response(
                                 ServerResponseMessage::Err {
                                     error: format!(
-                                        "Price feed(s) with id(s) {:?} not found",
-                                        not_found_price_ids
+                                        "Price feed(s) with id(s) {not_found_price_ids:?} not found",
                                     ),
                                 },
                             ))?
@@ -615,6 +681,7 @@ where
             .get_or_create(&Labels {
                 interaction: Interaction::ClientMessage,
                 status: Status::Success,
+                token_suffix: self.token_suffix.clone(),
             })
             .inc();
 

@@ -1,0 +1,129 @@
+from typing import TYPE_CHECKING
+
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.metrics import (
+    Counter,
+    Histogram,
+    Meter,
+    get_meter_provider,
+    set_meter_provider,
+)
+from opentelemetry.sdk.metrics import MeterProvider
+from prometheus_client import start_http_server
+
+if TYPE_CHECKING:
+    from opentelemetry.metrics._internal.instrument import Gauge
+
+from pusher.config import (
+    Config,
+    ConstantSourceConfig,
+    OracleMidAverageConfig,
+    PairSourceConfig,
+    PriceConfig,
+    PriceSource,
+    PriceSourceConfig,
+    SessionEMASourceConfig,
+    SingleSourceConfig,
+)
+
+METER_NAME = "hip3pusher"
+
+
+class Metrics:
+    meter: Meter
+    last_pushed_time: "Gauge"
+    update_attempts_total: Counter
+    no_oracle_price_counter: Counter
+    push_interval_histogram: Histogram
+    price_config_counter: Counter
+    user_request_balance: "Gauge"
+
+    def __init__(self, config: Config) -> None:
+        # Adapted from opentelemetry-exporter-prometheus example code.
+        # Start Prometheus client
+        start_http_server(port=config.prometheus_port)
+        # Exporter to export metrics to Prometheus
+        reader = PrometheusMetricReader()
+        # Meter is responsible for creating and recording metrics
+        set_meter_provider(MeterProvider(metric_readers=[reader]))
+        self.meter = get_meter_provider().get_meter(METER_NAME)
+        self._init_metrics()
+
+    def _init_metrics(self) -> None:
+        # labels: dex, symbol
+        self.last_pushed_time = self.meter.create_gauge(
+            name="hip_3_relayer_last_published_time",
+            description="Time of last successful oracle update",
+        )
+        # labels: dex, symbol, status, error_reason
+        self.update_attempts_total = self.meter.create_counter(
+            name="hip_3_relayer_update_attempts_total",
+            description="Number of update attempts",
+        )
+        # labels: dex
+        self.no_oracle_price_counter = self.meter.create_counter(
+            name="hip_3_relayer_no_oracle_price_count",
+            description="Number of failed push attempts with no valid oracle price",
+        )
+        # labels: dex
+        self.push_interval_histogram = self.meter.create_histogram(
+            name="hip_3_relayer_push_interval",
+            description="Interval between push requests (seconds)",
+            unit="s",
+        )
+        # labels: dex, price_type, symbol
+        self.price_config_counter = self.meter.create_counter(
+            name="hip_3_relayer_price_config",
+            description="Price source config",
+        )
+        # labels: dex, user
+        self.user_request_balance = self.meter.create_gauge(
+            name="hip_3_relayer_user_request_balance",
+            description="Number of update requests left before rate limit",
+        )
+
+    def set_price_configs(self, dex: str, price_config: PriceConfig) -> None:
+        self._set_price_config_type(dex, price_config.oracle, "oracle")
+        self._set_price_config_type(dex, price_config.mark, "mark")
+        self._set_price_config_type(dex, price_config.external, "external")
+
+    def _set_price_config_type(
+        self,
+        dex: str,
+        price_source_config: dict[str, list[PriceSourceConfig]],
+        price_type: str,
+    ) -> None:
+        for symbol in price_source_config:
+            source_config_str = " | ".join(
+                self._get_source_config_str(source_config)
+                for source_config in price_source_config[symbol]
+            )
+            labels = {
+                "dex": dex,
+                "symbol": symbol,
+                "price_type": price_type,
+                "config": source_config_str,
+            }
+            self.price_config_counter.add(1, labels)
+
+    def _get_source_config_str(self, source_config: PriceSourceConfig) -> str:
+        if isinstance(source_config, ConstantSourceConfig):
+            return f"constant({source_config.value})"
+        elif isinstance(source_config, SingleSourceConfig):
+            return self._get_price_source_str(source_config.source)
+        elif isinstance(source_config, PairSourceConfig):
+            base_str = self._get_price_source_str(source_config.base_source)
+            quote_str = self._get_price_source_str(source_config.quote_source)
+            return f"pair({base_str},{quote_str})"
+        elif isinstance(source_config, OracleMidAverageConfig):
+            return f"oracle_mid_average({source_config.symbol})"
+        elif isinstance(source_config, SessionEMASourceConfig):
+            oracle_str = self._get_price_source_str(source_config.oracle_source)
+            ema_str = self._get_price_source_str(source_config.ema_source)
+            return f"session_ema({oracle_str},{ema_str})"
+        else:
+            return "unknown"
+
+    def _get_price_source_str(self, price_source: PriceSource) -> str:
+        session_flag_str = ",use_session_flag" if price_source.use_session_flag else ""
+        return f"{price_source.source_name}({str(price_source.source_id)[:8]}{session_flag_str})"

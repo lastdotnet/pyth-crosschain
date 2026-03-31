@@ -1,35 +1,35 @@
 "use client";
 
-import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr/MagnifyingGlass";
 import { XCircle } from "@phosphor-icons/react/dist/ssr/XCircle";
 import { Badge } from "@pythnetwork/component-library/Badge";
 import type { Props as ButtonProps } from "@pythnetwork/component-library/Button";
 import { Button } from "@pythnetwork/component-library/Button";
 import { NoResults } from "@pythnetwork/component-library/NoResults";
+import { SearchButton as SearchButtonComponent } from "@pythnetwork/component-library/SearchButton";
 import { SearchInput } from "@pythnetwork/component-library/SearchInput";
 import { SingleToggleGroup } from "@pythnetwork/component-library/SingleToggleGroup";
-import { Skeleton } from "@pythnetwork/component-library/Skeleton";
+import { SymbolPairTag } from "@pythnetwork/component-library/SymbolPairTag";
 import {
-  Virtualizer,
   ListLayout,
+  Virtualizer,
 } from "@pythnetwork/component-library/Virtualizer";
 import type { Button as UnstyledButton } from "@pythnetwork/component-library/unstyled/Button";
+import type { ListBoxItemProps } from "@pythnetwork/component-library/unstyled/ListBox";
 import {
   ListBox,
   ListBoxItem,
 } from "@pythnetwork/component-library/unstyled/ListBox";
 import { useDrawer } from "@pythnetwork/component-library/useDrawer";
 import { useLogger } from "@pythnetwork/component-library/useLogger";
+import { matchSorter } from "match-sorter";
 import type { ReactNode } from "react";
-import { useMemo, useCallback, useEffect, useState } from "react";
-import { useIsSSR, useCollator, useFilter } from "react-aria";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import styles from "./search-button.module.scss";
 import { Cluster, ClusterToName } from "../../services/pyth";
 import { AssetClassBadge } from "../AssetClassBadge";
-import { PriceFeedTag } from "../PriceFeedTag";
 import { PublisherTag } from "../PublisherTag";
 import { Score } from "../Score";
+import styles from "./search-button.module.scss";
 
 const INPUTS = new Set(["input", "select", "button", "textarea"]);
 
@@ -50,11 +50,12 @@ type ResolvedSearchButtonProps = {
     displaySymbol: string;
     assetClass: string;
     description: string;
+    priceAccount: string;
     icon: ReactNode;
   }[];
   publishers: ({
     publisherKey: string;
-    averageScore: number;
+    averageScore?: number | undefined;
     cluster: Cluster;
   } & (
     | { name: string; icon: ReactNode }
@@ -72,31 +73,7 @@ const ResolvedSearchButton = (props: ResolvedSearchButtonProps) => {
 
 const SearchButtonImpl = (
   props: Omit<ButtonProps<typeof UnstyledButton>, "children">,
-) => (
-  <div className={styles.searchButton}>
-    <Button
-      className={styles.largeScreenSearchButton ?? ""}
-      variant="outline"
-      beforeIcon={<MagnifyingGlass />}
-      size="sm"
-      rounded
-      {...props}
-    >
-      <SearchShortcutText />
-    </Button>
-    <Button
-      className={styles.smallScreenSearchButton ?? ""}
-      hideText
-      variant="ghost"
-      beforeIcon={<MagnifyingGlass />}
-      size="sm"
-      rounded
-      {...props}
-    >
-      Search
-    </Button>
-  </div>
-);
+) => <SearchButtonComponent size="sm" {...props} />;
 
 const useSearchDrawer = ({ feeds, publishers }: ResolvedSearchButtonProps) => {
   const drawer = useDrawer();
@@ -150,77 +127,94 @@ const useSearchHotkey = (openSearchDrawer: () => void) => {
   }, [handleKeyDown]);
 };
 
-const SearchShortcutText = () => {
-  const isSSR = useIsSSR();
-  return isSSR ? <Skeleton width={7} /> : <SearchTextImpl />;
-};
-
-const SearchTextImpl = () => {
-  const isMac = useMemo(() => navigator.userAgent.includes("Mac"), []);
-  return isMac ? "⌘ K" : "Ctrl K";
-};
-
 type SearchDialogContentsProps = ResolvedSearchButtonProps;
 
 const SearchDialogContents = ({
   feeds,
   publishers,
 }: SearchDialogContentsProps) => {
+  /** hooks */
   const drawer = useDrawer();
   const logger = useLogger();
+
+  /** refs */
+  const closeDrawerDebounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const openTabModifierActiveRef = useRef(false);
+  const middleMousePressedRef = useRef(false);
+
+  /** state */
   const [search, setSearch] = useState("");
   const [type, setType] = useState<ResultType | "">("");
-  const collator = useCollator();
-  const filter = useFilter({ sensitivity: "base", usage: "search" });
+
+  /** callbacks */
   const closeDrawer = useCallback(() => {
-    drawer.close().catch((error: unknown) => {
-      logger.error(error);
-    });
+    if (closeDrawerDebounceRef.current) {
+      clearTimeout(closeDrawerDebounceRef.current);
+      closeDrawerDebounceRef.current = undefined;
+    }
+
+    // we debounce the drawer closure because, if we don't,
+    // mobile browsers (at least on iOS) may squash the native <a />
+    // click, resulting in no price feed loading for the user
+    closeDrawerDebounceRef.current = setTimeout(() => {
+      drawer.close().catch((error: unknown) => {
+        logger.error(error);
+      });
+    }, 250);
   }, [drawer, logger]);
-  const results = useMemo(
-    () =>
-      [
-        ...(type === ResultType.Publisher
-          ? []
-          : // This is inefficient but Safari doesn't support `Iterator.filter`,
-            // see https://bugs.webkit.org/show_bug.cgi?id=248650
-            [...feeds.entries()]
-              .filter(([, { displaySymbol }]) =>
-                filter.contains(displaySymbol, search),
-              )
-              .map(([symbol, feed]) => ({
-                type: ResultType.PriceFeed as const,
-                id: symbol,
-                ...feed,
-              }))),
-        ...(type === ResultType.PriceFeed
-          ? []
-          : publishers
-              .filter(
-                (publisher) =>
-                  filter.contains(publisher.publisherKey, search) ||
-                  (publisher.name && filter.contains(publisher.name, search)),
-              )
-              .map((publisher) => ({
-                type: ResultType.Publisher as const,
-                id: [
-                  ClusterToName[publisher.cluster],
-                  publisher.publisherKey,
-                ].join(":"),
-                ...publisher,
-              }))),
-      ].sort((a, b) =>
-        collator.compare(
-          a.type === ResultType.PriceFeed
-            ? a.displaySymbol
-            : (a.name ?? a.publisherKey),
-          b.type === ResultType.PriceFeed
-            ? b.displaySymbol
-            : (b.name ?? b.publisherKey),
-        ),
-      ),
-    [feeds, publishers, collator, filter, search, type],
-  );
+  const onLinkPointerDown = useCallback<
+    NonNullable<ListBoxItemProps<never>["onPointerDown"]>
+  >((e) => {
+    const { button, ctrlKey, metaKey } = e;
+
+    middleMousePressedRef.current = button === 1;
+
+    // on press is too abstracted and doesn't give us the native event
+    // for determining if the user clicked their middle mouse button,
+    // so we need to use the native onClick directly
+    middleMousePressedRef.current = button === 1;
+    openTabModifierActiveRef.current = metaKey || ctrlKey;
+  }, []);
+  const onLinkPointerUp = useCallback<
+    NonNullable<ListBoxItemProps<never>["onPointerUp"]>
+  >(() => {
+    const userWantsNewTab =
+      middleMousePressedRef.current || openTabModifierActiveRef.current;
+
+    // // they want a new tab, the search popover stays open
+    if (!userWantsNewTab) closeDrawer();
+
+    middleMousePressedRef.current = false;
+    openTabModifierActiveRef.current = false;
+  }, [closeDrawer]);
+
+  /** memos */
+  const results = useMemo(() => {
+    const filteredFeeds = matchSorter(feeds, search, {
+      keys: ["displaySymbol", "symbol", "description", "priceAccount"],
+    }).map(({ symbol, ...feed }) => ({
+      type: ResultType.PriceFeed as const,
+      id: symbol,
+      symbol,
+      ...feed,
+    }));
+
+    const filteredPublishers = matchSorter(publishers, search, {
+      keys: ["publisherKey", "name"],
+    }).map((publisher) => ({
+      type: ResultType.Publisher as const,
+      id: [ClusterToName[publisher.cluster], publisher.publisherKey].join(":"),
+      ...publisher,
+    }));
+
+    if (type === ResultType.PriceFeed) {
+      return filteredFeeds;
+    }
+    if (type === ResultType.Publisher) {
+      return filteredPublishers;
+    }
+    return [...filteredFeeds, ...filteredPublishers];
+  }, [feeds, publishers, search, type]);
 
   return (
     <div className={styles.searchDialogContents}>
@@ -267,17 +261,15 @@ const SearchDialogContents = ({
             className={styles.listbox ?? ""}
             // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus={false}
-            // @ts-expect-error looks like react-aria isn't exposing this
-            // property in the typescript types correctly...
             shouldFocusOnHover
-            emptyState={
+            renderEmptyState={() => (
               <NoResults
                 query={search}
                 onClearSearch={() => {
                   setSearch("");
                 }}
               />
-            }
+            )}
           >
             {(result) => (
               <ListBoxItem
@@ -287,17 +279,18 @@ const SearchDialogContents = ({
                     : (result.name ?? result.publisherKey)
                 }
                 className={styles.item ?? ""}
-                onAction={closeDrawer}
                 href={
                   result.type === ResultType.PriceFeed
                     ? `/price-feeds/${encodeURIComponent(result.symbol)}`
                     : `/publishers/${ClusterToName[result.cluster]}/${encodeURIComponent(result.publisherKey)}`
                 }
                 data-is-first={result.id === results[0]?.id ? "" : undefined}
+                onPointerDown={onLinkPointerDown}
+                onPointerUp={onLinkPointerUp}
               >
                 <div className={styles.smallScreen}>
                   {result.type === ResultType.PriceFeed ? (
-                    <PriceFeedTag
+                    <SymbolPairTag
                       className={styles.itemTag}
                       displaySymbol={result.displaySymbol}
                       description={result.description}
@@ -347,7 +340,9 @@ const SearchDialogContents = ({
                         <>
                           <dt>Average Score</dt>
                           <dd>
-                            <Score score={result.averageScore} />
+                            {result.averageScore !== undefined && (
+                              <Score score={result.averageScore} />
+                            )}
                           </dd>
                         </>
                       )}
@@ -372,7 +367,7 @@ const SearchDialogContents = ({
                   </div>
                   {result.type === ResultType.PriceFeed ? (
                     <>
-                      <PriceFeedTag
+                      <SymbolPairTag
                         displaySymbol={result.displaySymbol}
                         description={result.description}
                         icon={result.icon}
@@ -391,7 +386,9 @@ const SearchDialogContents = ({
                           icon: result.icon,
                         })}
                       />
-                      <Score score={result.averageScore} />
+                      {result.averageScore !== undefined && (
+                        <Score score={result.averageScore} />
+                      )}
                     </>
                   )}
                 </div>

@@ -1,32 +1,40 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
+/* eslint-disable @typescript-eslint/no-floating-promises */
+
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
+/* eslint-disable unicorn/prefer-top-level-await */
+
+/* eslint-disable no-console */
+
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { EvmChain } from "../src/core/chains";
-import { DefaultStore } from "../src/node/utils/store";
-import {
-  ENTROPY_DEFAULT_KEEPER,
-  ENTROPY_DEFAULT_PROVIDER,
-  EvmEntropyContract,
-} from "../src/core/contracts/evm";
-import {
-  DeploymentType,
-  getDefaultDeploymentConfig,
-  toDeploymentType,
-  toPrivateKey,
-} from "../src/core/base";
+
+import type { BaseDeployConfig, DefaultAddresses } from "./common";
 import {
   COMMON_DEPLOY_OPTIONS,
   deployIfNotCached,
   getWeb3Contract,
   getOrDeployWormholeContract,
-  BaseDeployConfig,
   topupAccountsIfNecessary,
-  DefaultAddresses,
 } from "./common";
+import { getOrDeployExecutorContract } from "./deploy_evm_executor_contracts";
+import type { DeploymentType } from "../src/core/base";
+import { toDeploymentType, toPrivateKey } from "../src/core/base";
+import { EvmChain } from "../src/core/chains";
+import {
+  ENTROPY_DEFAULT_KEEPER,
+  ENTROPY_DEFAULT_PROVIDER,
+  EvmEntropyContract,
+} from "../src/core/contracts/evm";
+import { DefaultStore } from "../src/node/utils/store";
 
-interface DeploymentConfig extends BaseDeployConfig {
+type DeploymentConfig = {
   type: DeploymentType;
   saveContract: boolean;
-}
+} & BaseDeployConfig;
 
 const CACHE_FILE = ".cache-deploy-evm-entropy-contracts";
 
@@ -43,44 +51,6 @@ const parser = yargs(hideBin(process.argv))
       desc: "Chain to upload the contract on. Can be one of the evm chains available in the store",
     },
   });
-
-async function deployExecutorContracts(
-  chain: EvmChain,
-  config: DeploymentConfig,
-  wormholeAddr: string,
-): Promise<string> {
-  const executorImplAddr = await deployIfNotCached(
-    CACHE_FILE,
-    chain,
-    config,
-    "ExecutorUpgradable",
-    [],
-  );
-
-  // Craft the init data for the proxy contract
-  const { governanceDataSource } = getDefaultDeploymentConfig(config.type);
-
-  const executorImplContract = getWeb3Contract(
-    config.jsonOutputDir,
-    "ExecutorUpgradable",
-    executorImplAddr,
-  );
-
-  const executorInitData = executorImplContract.methods
-    .initialize(
-      wormholeAddr,
-      0, // lastExecutedSequence,
-      chain.getWormholeChainId(),
-      governanceDataSource.emitterChain,
-      `0x${governanceDataSource.emitterAddress}`,
-    )
-    .encodeABI();
-
-  return await deployIfNotCached(CACHE_FILE, chain, config, "ERC1967Proxy", [
-    executorImplAddr,
-    executorInitData,
-  ]);
-}
 
 async function deployEntropyContracts(
   chain: EvmChain,
@@ -130,7 +100,7 @@ async function topupEntropyAccountsIfNecessary(
   chain: EvmChain,
   deploymentConfig: DeploymentConfig,
 ) {
-  const accounts: Array<[string, DefaultAddresses]> = [
+  const accounts: [string, DefaultAddresses][] = [
     ["keeper", ENTROPY_DEFAULT_KEEPER],
     ["provider", ENTROPY_DEFAULT_PROVIDER],
   ];
@@ -160,13 +130,17 @@ async function main() {
 
   await topupEntropyAccountsIfNecessary(chain, deploymentConfig);
 
+  const maskedDeploymentConfig = {
+    ...deploymentConfig,
+    privateKey: deploymentConfig.privateKey ? `<REDACTED>` : undefined,
+  };
   console.log(
-    `Deployment config: ${JSON.stringify(deploymentConfig, null, 2)}\n`,
+    `Deployment config: ${JSON.stringify(maskedDeploymentConfig, undefined, 2)}\n`,
   );
 
   console.log(`Deploying entropy contracts on ${chain.getId()}...`);
 
-  const executorAddr = await deployExecutorContracts(
+  const executorContract = await getOrDeployExecutorContract(
     chain,
     deploymentConfig,
     wormholeContract.address,
@@ -174,7 +148,7 @@ async function main() {
   const entropyAddr = await deployEntropyContracts(
     chain,
     deploymentConfig,
-    executorAddr,
+    executorContract.address,
   );
 
   if (deploymentConfig.saveContract) {

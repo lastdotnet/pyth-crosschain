@@ -1,18 +1,32 @@
+/* eslint-disable tsdoc/syntax */
+/* eslint-disable @typescript-eslint/await-thenable */
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-base-to-string */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/require-await */
+import type { DataSource } from "@pythnetwork/xc-admin-common";
 import Web3 from "web3";
 import type { Contract } from "web3-eth-contract";
-import { PriceFeedContract, PrivateKey, Storable } from "../base";
-import { Chain, EvmChain } from "../chains";
-import { DataSource } from "@pythnetwork/xc-admin-common";
-import { WormholeContract } from "./wormhole";
-import { TokenQty } from "../token";
+
+import type { PrivateKey } from "../base";
+import { PriceFeedContract, Storable } from "../base";
+import type { Chain } from "../chains";
+import { EvmChain } from "../chains";
+import type { TokenQty } from "../token";
 import {
   EXECUTOR_ABI,
-  EXPRESS_RELAY_ABI,
   EXTENDED_ENTROPY_ABI,
   EXTENDED_PYTH_ABI,
-  WORMHOLE_ABI,
+  LAZER_ABI,
   PULSE_UPGRADEABLE_ABI,
+  WORMHOLE_ABI,
 } from "./evm_abis";
+import { WormholeContract } from "./wormhole";
 
 /**
  * Returns the keccak256 digest of the contract bytecode at the given address after replacing
@@ -117,14 +131,14 @@ export class EvmWormholeContract extends WormholeContract {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: EvmWormholeContract.type,
     };
   }
 }
 
-interface EntropyProviderInfo {
+type EntropyProviderInfo = {
   feeInWei: string;
   accruedFeesInWei: string;
   originalCommitment: string;
@@ -136,9 +150,9 @@ interface EntropyProviderInfo {
   currentCommitment: string;
   currentCommitmentSequenceNumber: string;
   feeManager: string;
-}
+};
 
-interface EntropyRequest {
+type EntropyRequest = {
   provider: string;
   sequenceNumber: string;
   numHashes: string;
@@ -147,7 +161,7 @@ interface EntropyRequest {
   requester: string;
   useBlockhash: boolean;
   isRequestWithCallback: boolean;
-}
+};
 
 export const ENTROPY_DEFAULT_PROVIDER = {
   mainnet: "0x52DeaA1c84233F7bb8C8A45baeDE41091c616506",
@@ -222,6 +236,16 @@ export class EvmEntropyContract extends Storable {
     );
   }
 
+  async generateSetPythFeePayload(feeInWei: string): Promise<Buffer> {
+    const contract = this.getContract();
+    const data = contract.methods.setPythFee(feeInWei).encodeABI();
+    return this.chain.generateExecutorPayload(
+      await this.getOwner(),
+      this.address,
+      data,
+    );
+  }
+
   // Generates a payload to upgrade the executor contract, the owner of entropy contracts
   async generateUpgradeExecutorContractsPayload(
     newImplementation: string,
@@ -251,8 +275,8 @@ export class EvmEntropyContract extends Storable {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: EvmEntropyContract.type,
     };
   }
@@ -281,8 +305,8 @@ export class EvmEntropyContract extends Storable {
   /**
    * Returns the request for the given provider and sequence number
    * This will return a EntropyRequest object with sequenceNumber "0" if the request does not exist
-   * @param provider The entropy provider address
-   * @param sequenceNumber The sequence number of the request for the provider
+   * @param provider - The entropy provider address
+   * @param sequenceNumber - The sequence number of the request for the provider
    */
   async getRequest(
     provider: string,
@@ -297,9 +321,9 @@ export class EvmEntropyContract extends Storable {
    * This method assumes the request was made with a callback option and fetches the user random number
    * by finding the `RequestedWithCallback` log. The block number at which the request was made is required
    * to find the log.
-   * @param provider The entropy provider address
-   * @param sequenceNumber The sequence number of the request for the provider
-   * @param block The block number at which the request was made, you can find this using the `getRequest` method
+   * @param provider - The entropy provider address
+   * @param sequenceNumber - The sequence number of the request for the provider
+   * @param block - The block number at which the request was made, you can find this using the `getRequest` method
    */
   async getUserRandomNumber(
     provider: string,
@@ -308,23 +332,23 @@ export class EvmEntropyContract extends Storable {
   ): Promise<string> {
     const contract = this.getContract();
     const result = await contract.getPastEvents("RequestedWithCallback", {
-      fromBlock: block,
-      toBlock: block,
       filter: {
         provider,
         sequenceNumber: sequenceNumber,
       },
+      fromBlock: block,
+      toBlock: block,
     });
-    return result[0].returnValues.userRandomNumber;
+    return result[0]?.returnValues.userRandomNumber ?? "";
   }
 
   /**
    * Submits a transaction to the entropy contract to reveal the random number and call the callback function
-   * @param userRandomNumber The random number generated by the user, you can find this using the `getUserRandomNumber` method
-   * @param providerRevelation The random number generated by the provider, you can find this via the provider server
-   * @param provider The entropy provider address
-   * @param sequenceNumber The sequence number of the request for the provider
-   * @param senderPrivateKey The private key to use for submitting the transaction on-chain
+   * @param userRandomNumber - The random number generated by the user, you can find this using the `getUserRandomNumber` method
+   * @param providerRevelation - The random number generated by the provider, you can find this via the provider server
+   * @param provider - The entropy provider address
+   * @param sequenceNumber - The sequence number of the request for the provider
+   * @param senderPrivateKey - The private key to use for submitting the transaction on-chain
    */
   async revealWithCallback(
     userRandomNumber: string,
@@ -411,10 +435,15 @@ export class EvmEntropyContract extends Storable {
       from: address,
     });
   }
+
+  async getAccruedPythFees(): Promise<string> {
+    const contract = this.getContract();
+    return await contract.methods.getAccruedPythFees().call();
+  }
 }
 
-export class EvmExpressRelayContract extends Storable {
-  static type = "EvmExpressRelayContract";
+export class EvmExecutorContract extends Storable {
+  static type = "EvmExecutorContract";
 
   constructor(
     public chain: EvmChain,
@@ -427,87 +456,16 @@ export class EvmExpressRelayContract extends Storable {
     return `${this.chain.getId()}_${this.address}`;
   }
 
-  getChain(): EvmChain {
-    return this.chain;
-  }
-
   getType(): string {
-    return EvmExpressRelayContract.type;
-  }
-
-  async getVersion(): Promise<string> {
-    const contract = this.getContract();
-    return contract.methods.version().call();
-  }
-
-  static fromJson(
-    chain: Chain,
-    parsed: { type: string; address: string },
-  ): EvmExpressRelayContract {
-    if (parsed.type !== EvmExpressRelayContract.type)
-      throw new Error("Invalid type");
-    if (!(chain instanceof EvmChain))
-      throw new Error(`Wrong chain type ${chain}`);
-    return new EvmExpressRelayContract(chain, parsed.address);
-  }
-
-  async generateSetRelayerPayload(relayer: string): Promise<Buffer> {
-    const contract = this.getContract();
-    const data = contract.methods.setRelayer(relayer).encodeABI();
-    return this.chain.generateExecutorPayload(
-      await this.getOwner(),
-      this.address,
-      data,
-    );
-  }
-
-  async getOwner(): Promise<string> {
-    const contract = this.getContract();
-    return contract.methods.owner().call();
-  }
-
-  async getExecutorContract(): Promise<EvmExecutorContract> {
-    const owner = await this.getOwner();
-    return new EvmExecutorContract(this.chain, owner);
-  }
-
-  async getPendingOwner(): Promise<string> {
-    const contract = this.getContract();
-    return contract.methods.pendingOwner().call();
-  }
-
-  async getRelayer(): Promise<string> {
-    const contract = this.getContract();
-    return contract.methods.getRelayer().call();
-  }
-
-  async getRelayerSubwallets(): Promise<string[]> {
-    const contract = this.getContract();
-    return contract.methods.getRelayerSubwallets().call();
+    return EvmExecutorContract.type;
   }
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
-      type: EvmExpressRelayContract.type,
+      chain: this.chain.getId(),
+      type: EvmExecutorContract.type,
     };
-  }
-
-  getContract() {
-    const web3 = this.chain.getWeb3();
-    return new web3.eth.Contract(EXPRESS_RELAY_ABI, this.address);
-  }
-}
-
-export class EvmExecutorContract {
-  constructor(
-    public chain: EvmChain,
-    public address: string,
-  ) {}
-
-  getId(): string {
-    return `${this.chain.getId()}_${this.address}`;
   }
 
   async getWormholeContract(): Promise<EvmWormholeContract> {
@@ -517,6 +475,17 @@ export class EvmExecutorContract {
     let address = await web3.eth.getStorageAt(this.address, 251);
     address = "0x" + address.slice(26);
     return new EvmWormholeContract(this.chain, address);
+  }
+
+  static fromJson(
+    chain: Chain,
+    parsed: { type: string; address: string },
+  ): EvmExecutorContract {
+    if (parsed.type !== EvmExecutorContract.type)
+      throw new Error("Invalid type");
+    if (!(chain instanceof EvmChain))
+      throw new Error(`Wrong chain type ${chain}`);
+    return new EvmExecutorContract(chain, parsed.address);
   }
 
   getContract() {
@@ -537,8 +506,8 @@ export class EvmExecutorContract {
       .getOwnerChainId()
       .call();
     return {
-      emitterChain: Number(ownerEmitterChainid),
       emitterAddress: ownerEmitterAddress.replace("0x", ""),
+      emitterChain: Number(ownerEmitterChainid),
     };
   }
 
@@ -641,7 +610,7 @@ export class EvmPriceFeedContract extends PriceFeedContract {
     try {
       web3 = this.chain.getWeb3();
       amount = BigInt(await web3.eth.getBalance(this.address));
-    } catch (error) {
+    } catch {
       console.error(
         "Error getting balance with given RPC, moving to viem default RPC",
       );
@@ -666,7 +635,7 @@ export class EvmPriceFeedContract extends PriceFeedContract {
     const feed = "0x" + feedId;
     const exists = await pythContract.methods.priceFeedExists(feed).call();
     if (!exists) {
-      return undefined;
+      return;
     }
     const [price, conf, expo, publishTime] = await pythContract.methods
       .getPriceUnsafe(feed)
@@ -675,13 +644,13 @@ export class EvmPriceFeedContract extends PriceFeedContract {
     const [emaPrice, emaConf, emaExpo, emaPublishTime] =
       await pythContract.methods.getEmaPriceUnsafe(feed).call();
     return {
-      price: { price, conf, expo, publishTime },
       emaPrice: {
-        price: emaPrice,
         conf: emaConf,
         expo: emaExpo,
+        price: emaPrice,
         publishTime: emaPublishTime,
       },
+      price: { conf, expo, price, publishTime },
     };
   }
 
@@ -718,8 +687,8 @@ export class EvmPriceFeedContract extends PriceFeedContract {
         emitterAddress: string;
       }) => {
         return {
-          emitterChain: Number(chainId),
           emitterAddress: emitterAddress.replace("0x", ""),
+          emitterChain: Number(chainId),
         };
       },
     );
@@ -731,8 +700,8 @@ export class EvmPriceFeedContract extends PriceFeedContract {
       .governanceDataSource()
       .call();
     return {
-      emitterChain: Number(chainId),
       emitterAddress: emitterAddress.replace("0x", ""),
+      emitterChain: Number(chainId),
     };
   }
 
@@ -776,8 +745,8 @@ export class EvmPriceFeedContract extends PriceFeedContract {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: EvmPriceFeedContract.type,
     };
   }
@@ -831,8 +800,8 @@ export class EvmPulseContract extends Storable {
 
   toJson() {
     return {
-      chain: this.chain.getId(),
       address: this.address,
+      chain: this.chain.getId(),
       type: EvmPulseContract.type,
     };
   }
@@ -892,13 +861,13 @@ export class EvmPulseContract extends Storable {
   }
 
   async getFirstActiveRequests(count: number): Promise<{
-    requests: Array<{
+    requests: {
       provider: string;
       publishTime: string;
       priceIds: string[];
       callbackGasLimit: string;
       requester: string;
-    }>;
+    }[];
     actualCount: number;
   }> {
     const contract = this.getContract();
@@ -985,5 +954,144 @@ export class EvmPulseContract extends Storable {
       this.address,
       data,
     );
+  }
+}
+
+export class EvmLazerContract extends Storable {
+  static type = "EvmLazerContract";
+
+  constructor(
+    public chain: EvmChain,
+    public address: string,
+  ) {
+    super();
+  }
+
+  getId(): string {
+    return `${this.chain.getId()}_${this.address}`;
+  }
+
+  getType(): string {
+    return EvmLazerContract.type;
+  }
+
+  toJson() {
+    return {
+      address: this.address,
+      chain: this.chain.getId(),
+      type: EvmLazerContract.type,
+    };
+  }
+
+  static fromJson(
+    chain: Chain,
+    parsed: { type: string; address: string },
+  ): EvmLazerContract {
+    if (parsed.type !== EvmLazerContract.type) {
+      throw new Error("Invalid type");
+    }
+    return new EvmLazerContract(chain as EvmChain, parsed.address);
+  }
+
+  getContract() {
+    const web3 = this.chain.getWeb3();
+    return new web3.eth.Contract(LAZER_ABI, this.address);
+  }
+
+  async getVersion(): Promise<string> {
+    const contract = this.getContract();
+    return await contract.methods.version().call();
+  }
+
+  async getOwner(): Promise<string> {
+    const contract = this.getContract();
+    return contract.methods.owner().call();
+  }
+
+  async generateUpdateTrustedSignerPayload(
+    trustedSigner: string,
+    expiresAt: number,
+  ): Promise<Buffer> {
+    // Executor contract is the owner of the PythLazer contract
+    const executorAddress = await this.getOwner();
+    const web3 = this.chain.getWeb3();
+    const executorContract = new web3.eth.Contract(
+      EXECUTOR_ABI,
+      executorAddress,
+    );
+    const data = executorContract.methods
+      .updateTrustedSigner(trustedSigner, expiresAt)
+      .encodeABI();
+    return this.chain.generateExecutorPayload(
+      executorAddress,
+      this.address,
+      data,
+    );
+  }
+
+  async generateUpgradeLazerContractPayload(
+    newImplementation: string,
+  ): Promise<Buffer> {
+    const contract = this.getContract();
+    const data = contract.methods.upgradeTo(newImplementation).encodeABI();
+    return this.chain.generateExecutorPayload(
+      await this.getOwner(),
+      this.address,
+      data,
+    );
+  }
+
+  /**
+   * Updates the trusted signer for the PythLazer contract
+   * @param trustedSigner - The address of the trusted signer
+   * @param expiresAt - The expiration timestamp for the signer
+   * @param privateKey - The private key to sign the transaction
+   * @note The privateKey should be the owner of the Lazer contract. It's not possible to run this function if the executor contract is the owner.
+   */
+  async updateTrustedSigner(
+    trustedSigner: string,
+    expiresAt: number,
+    privateKey: PrivateKey,
+    rawTx = false,
+  ): Promise<void> {
+    const web3 = this.chain.getWeb3();
+    const contract = this.getContract();
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+
+    if (rawTx) {
+      web3.eth.accounts.wallet.add(privateKey);
+      const data = contract.methods
+        .updateTrustedSigner(trustedSigner, expiresAt)
+        .encodeABI();
+      const gasEstimate = await web3.eth.estimateGas({
+        data,
+        from: account.address,
+        to: this.address,
+      });
+      const tx = await web3.eth.sendTransaction({
+        data,
+        from: account.address,
+        gas: Math.ceil(Number(gasEstimate) * 1.2).toString(),
+        to: this.address,
+      });
+      console.log(
+        `Updated trusted signer ${trustedSigner} with expiration ${expiresAt}`,
+      );
+      console.log(`Transaction hash: ${tx.transactionHash}`);
+    } else {
+      const gasEstimate = await contract.methods
+        .updateTrustedSigner(trustedSigner, expiresAt)
+        .estimateGas({ from: account.address });
+      const tx = await contract.methods
+        .updateTrustedSigner(trustedSigner, expiresAt)
+        .send({
+          from: account.address,
+          gas: Math.floor(gasEstimate * 1.2), // 20% buffer
+        });
+      console.log(
+        `Updated trusted signer ${trustedSigner} with expiration ${expiresAt}`,
+      );
+      console.log(`Transaction hash: ${tx.transactionHash}`);
+    }
   }
 }

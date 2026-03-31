@@ -22,7 +22,7 @@ Pyth prices and submit them to the network:
 
 ```typescript
 const connection = new SuiPriceServiceConnection(
-  "https://hermes-beta.pyth.network"
+  "https://hermes-beta.pyth.network",
 ); // See Hermes endpoints section below for other endpoints
 
 const priceIds = [
@@ -61,7 +61,7 @@ const priceUpdateData = await connection.getPriceFeedsUpdateData(priceIds); // s
 // It is either injected from browser or instantiated in backend via some private key
 const wallet: SignerWithProvider = getWallet();
 // Get the state ids of the Pyth and Wormhole contracts from
-// https://docs.pyth.network/documentation/pythnet-price-feeds/sui
+// https://docs.pyth.network/price-feeds/contract-addresses/sui
 const wormholeStateId = " 0xFILL_ME";
 const pythStateId = "0xFILL_ME";
 
@@ -104,8 +104,9 @@ You can run this example with `pnpm turbo --filter @pythnetwork/pyth-sui-js run 
 
 ```bash
 export SUI_KEY=YOUR_PRIV_KEY;
-pnpm turbo --filter @pythnetwork/pyth-sui-js run example-relay -- --feed-id "5a035d5440f5c163069af66062bac6c79377bf88396fa27e6067bfca8096d280" \
---price-service "https://hermes-beta.pyth.network" \
+pnpm turbo run example-relay --filter @pythnetwork/pyth-sui-js -- \
+--feed-id "5a035d5440f5c163069af66062bac6c79377bf88396fa27e6067bfca8096d280" \
+--hermes "https://hermes-beta.pyth.network" \
 --full-node "https://fullnode.testnet.sui.io:443" \
 --pyth-state-id "0xd3e79c2c083b934e78b3bd58a490ec6b092561954da6e7322e1e2b3c8abfddc0" \
 --wormhole-state-id "0x31358d198147da50db32eda2562951d53973a0c0ad5ed738e9b17d88b213d790"
@@ -114,36 +115,36 @@ pnpm turbo --filter @pythnetwork/pyth-sui-js run example-relay -- --feed-id "5a0
 ## Off-chain prices
 
 Many applications additionally need to display Pyth prices off-chain, for example, in their frontend application.
-The `SuiPriceServiceConnection` provides two different ways to fetch the current Pyth price.
+The `SuiPriceServiceConnection` is an extension of the [Hermes client](https://github.com/pyth-network/pyth-crosschain/tree/main/apps/hermes/client/js)
+and provides two different ways to fetch the current Pyth price.
 The code blocks below assume that the `connection` and `priceIds` objects have been initialized as shown above.
 The first method is a single-shot query:
 
 ```typescript
-// `getLatestPriceFeeds` returns a `PriceFeed` for each price id. It contains all information about a price and has
-// utility functions to get the current and exponentially-weighted moving average price, and other functionality.
-const priceFeeds = await connection.getLatestPriceFeeds(priceIds);
-// Get the price if it is not older than 60 seconds from the current time.
-console.log(priceFeeds[0].getPriceNoOlderThan(60)); // Price { conf: '1234', expo: -8, price: '12345678' }
-// Get the exponentially-weighted moving average price if it is not older than 60 seconds from the current time.
-console.log(priceFeeds[1].getEmaPriceNoOlderThan(60));
+// `getLatestPriceFeeds` returns a `PriceUpdate`; see the [hermes-client](https://github.com/pyth-network/pyth-crosschain/tree/main/apps/hermes/client/js) documentation for details.
+const priceUpdate: PriceUpdate = await connection.getLatestPriceUpdates(priceIds, { parsed: true });
+if (priceUpdate.parsed) {
+    console.log("ParsedPriceUpdate:", priceUpdate.parsed);
+}
 ```
 
-The object also supports a streaming websocket connection that allows you to subscribe to every new price update for a given feed.
+The object also supports a streaming Server-Sent Events (SSE) connection that allows you to subscribe to every new price update for a given feed.
 This method is useful if you want to show continuously updating real-time prices in your frontend:
 
 ```typescript
-// Subscribe to the price feeds given by `priceId`. The callback will be invoked every time the requested feed
-// gets a price update.
-connection.subscribePriceFeedUpdates(priceIds, (priceFeed) => {
-  console.log(
-    `Received update for ${priceFeed.id}: ${priceFeed.getPriceNoOlderThan(60)}`
-  );
-});
-
-// When using the subscription, make sure to close the websocket upon termination to finish the process gracefully.
-setTimeout(() => {
-  connection.closeWebSocket();
-}, 60000);
+// Streaming price updates
+const eventSource = await connection.getPriceUpdatesStream(priceIds, { parsed: true });
+eventSource.onmessage = (event) => {
+    console.log("Received price update:", event.data);
+};
+eventSource.onerror = (error) => {
+    console.error("Error receiving updates:", error);
+    eventSource.close();
+};
+await sleep(5000);
+// To stop listening to the updates, you can call eventSource.close();
+console.log("Closing event source.");
+eventSource.close();
 ```
 
 ## Hermes endpoints

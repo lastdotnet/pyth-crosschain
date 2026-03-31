@@ -1,24 +1,7 @@
 {
-  "name": "@pythnetwork/xc-admin-proposer-server",
-  "version": "0.0.0",
-  "description": "A server that proposes the instructions that it receives to the multisig",
-  "private": "true",
   "author": "",
-  "homepage": "https://github.com/pyth-network/pyth-crosschain",
-  "license": "ISC",
-  "main": "src/index.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pyth-network/pyth-crosschain.git"
-  },
   "bugs": {
     "url": "https://github.com/pyth-network/pyth-crosschain/issues"
-  },
-  "scripts": {
-    "build": "tsc",
-    "start": "node lib/index.js",
-    "fix:format": "prettier --write \"src/**/*.ts\"",
-    "test:format": "prettier --check \"src/**/*.ts\""
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
@@ -32,8 +15,35 @@
     "express": "^4.19.2",
     "ts-node": "catalog:"
   },
+  "description": "A server that proposes the instructions that it receives to the multisig",
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "typescript": "catalog:"
-  }
+    "@types/express": "^4.17.21"
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "exports": {
+    ".": {
+      "default": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "homepage": "https://github.com/pyth-network/pyth-crosschain",
+  "license": "ISC",
+  "main": "./dist/index.cjs",
+  "name": "@pythnetwork/xc-admin-proposer-server",
+  "private": "true",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pyth-network/pyth-crosschain.git"
+  },
+  "scripts": {
+    "build": "ts-duality --noEsm",
+    "clean": "rm -rf ./dist",
+    "start": "node dist/index.js"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "0.1.0"
 }

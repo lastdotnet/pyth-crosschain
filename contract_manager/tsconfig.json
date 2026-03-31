@@ -1,8 +1,10 @@
 {
-  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src/",
-    "outDir": "./lib"
+    "module": "preserve",
+    "moduleResolution": "node",
+    "target": "ES2020",
   },
-  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/__tests__/*"],
+  "extends": "@cprussin/tsconfig/base.json",
+  "include": ["scripts", "src"],
 }

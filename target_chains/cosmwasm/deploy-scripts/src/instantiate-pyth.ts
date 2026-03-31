@@ -1,15 +1,20 @@
-import yargs from "yargs";
+import createCLI from "yargs";
 import { hideBin } from "yargs/helpers";
 import { sha256 } from "@cosmjs/crypto";
-import { getPythConfig } from "./configs";
-import { DefaultStore, Store } from "@pythnetwork/contract-manager/node/store";
+import { getPythConfig } from "./configs.js";
 import { CosmWasmChain } from "@pythnetwork/contract-manager/core/chains";
 import { toPrivateKey } from "@pythnetwork/contract-manager/core/base";
 import { CosmWasmPriceFeedContract } from "@pythnetwork/contract-manager/core/contracts/cosmwasm";
-import { CHAINS } from "@pythnetwork/xc-admin-common";
-import { DeploymentType, getContractBytesDict } from "./helper";
+import { type DeploymentType, getContractBytesDict } from "./helper.js";
+import {
+  DefaultStore,
+  Store,
+} from "@pythnetwork/contract-manager/node/utils/store";
+import { CHAINS } from "@pythnetwork/xc-admin-common/chains";
 
-const argv = yargs(hideBin(process.argv))
+const yargs = createCLI(hideBin(process.argv));
+
+const argv = yargs
   .usage("USAGE: npm run instantiate-pyth -- <command>")
   .option("private-key", {
     type: "string",
@@ -62,13 +67,13 @@ async function run() {
   );
 
   const checksum = Buffer.from(
-    sha256(contractBytesDict[pythArtifactZipName]),
+    sha256(contractBytesDict[pythArtifactZipName]!),
   ).toString("hex");
 
   console.log(`Downloaded wasm checksum ${checksum}`);
 
   const storeCodeRes = await chainExecutor.storeCode({
-    contractBytes: contractBytesDict[pythArtifactZipName],
+    contractBytes: contractBytesDict[pythArtifactZipName]!,
   });
 
   console.log(
@@ -79,6 +84,7 @@ async function run() {
     codeId: storeCodeRes.codeId,
     instMsg: getPythConfig({
       feeDenom: chain.feeDenom,
+      // @ts-expect-error - the chain name can safely index the CHAINS object
       wormholeChainId: CHAINS[chain.wormholeChainName],
       wormholeContract: argv.wormhole,
       deploymentType: argv.deploy as DeploymentType,

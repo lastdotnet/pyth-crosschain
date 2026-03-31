@@ -1,22 +1,10 @@
 {
-  "name": "@pythnetwork/api-reference",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": "22"
-  },
-  "scripts": {
-    "build:vercel": "next build",
-    "fix:format": "prettier --write .",
-    "fix:lint": "eslint --fix . --max-warnings 0",
-    "pull:env": "[ $CI ] || VERCEL_ORG_ID=team_BKQrg3JJFLxZyTqpuYtIY0rj VERCEL_PROJECT_ID=prj_gbljYVzp0m5EpCuOF6nZpM4WMFM6 vercel env pull",
-    "start:dev": "next dev --port 3002",
-    "start:prod": "next start --port 3002",
-    "test:format": "prettier --check .",
-    "test:lint": "eslint . --max-warnings 0",
-    "test:types": "tsc"
-  },
+  "browserslist": [
+    "last 1 chrome version",
+    "last 1 firefox version",
+    "last 1 safari version",
+    "not dead"
+  ],
   "dependencies": {
     "@amplitude/analytics-browser": "catalog:",
     "@amplitude/plugin-autocapture-browser": "catalog:",
@@ -25,13 +13,13 @@
     "@heroicons/react": "catalog:",
     "@next/third-parties": "catalog:",
     "@pythnetwork/client": "catalog:",
+    "@pythnetwork/contract-manager": "workspace:*",
     "@pythnetwork/pyth-sdk-solidity": "workspace:*",
     "@solana/web3.js": "catalog:",
     "@tanstack/react-query": "catalog:",
     "bs58": "catalog:",
     "clsx": "catalog:",
     "connectkit": "catalog:",
-    "cryptocurrency-icons": "catalog:",
     "framer-motion": "catalog:",
     "next": "catalog:",
     "next-themes": "catalog:",
@@ -46,10 +34,8 @@
   },
   "devDependencies": {
     "@axe-core/react": "catalog:",
-    "@cprussin/eslint-config": "catalog:",
-    "@cprussin/jest-config": "catalog:",
-    "@cprussin/prettier-config": "catalog:",
     "@cprussin/tsconfig": "catalog:",
+    "@pythnetwork/jest-config": "workspace:",
     "@svgr/webpack": "catalog:",
     "@tailwindcss/forms": "catalog:",
     "@types/jest": "catalog:",
@@ -57,12 +43,23 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "autoprefixer": "catalog:",
-    "eslint": "catalog:",
     "jest": "catalog:",
     "postcss": "catalog:",
-    "prettier": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
     "vercel": "catalog:"
-  }
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "name": "@pythnetwork/api-reference",
+  "private": true,
+  "scripts": {
+    "build:vercel": "next build",
+    "pull:env": "[ $CI ] || VERCEL_ORG_ID=team_BKQrg3JJFLxZyTqpuYtIY0rj VERCEL_PROJECT_ID=prj_gbljYVzp0m5EpCuOF6nZpM4WMFM6 vercel env pull",
+    "start:dev": "next dev --port 3002",
+    "start:prod": "next start --port 3002",
+    "test:types": "tsc"
+  },
+  "type": "module",
+  "version": "0.0.0"
 }

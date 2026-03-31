@@ -1,0 +1,15 @@
+{
+  "extends": "@cprussin/tsconfig/base.json",
+  "include": [
+    "src"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "ESNext"
+    ]
+  },
+  "exclude": [
+    "src/examples",
+    "node_modules"
+  ]
+}

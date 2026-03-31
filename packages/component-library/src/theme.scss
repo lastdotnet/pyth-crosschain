@@ -30,6 +30,21 @@ $font-weight: (
   @return map-get-strict($font-weight, $weight);
 }
 
+$font-family: (
+  "monospace": (
+    "ui-monospace",
+    "sfmono-regular",
+    "consolas",
+    "Liberation Mono",
+    "menlo",
+    "monospace",
+  ),
+);
+
+@function font-family($family) {
+  @return map-get-strict($font-family, $family);
+}
+
 $font-size: (
   "xxs": 0.6875rem,
   "xs": 0.75rem,
@@ -902,3 +917,31 @@ $breakpoints: (
 }
 
 $header-height: var(--header-height);
+
+// creates native CSS variables for any values in a map object
+@mixin export-css-vars($map, $prefix: "") {
+  @each $key, $value in $map {
+    $var-name: if($prefix != "", "#{$prefix}-#{$key}", "#{$key}");
+
+    @if meta.type-of($value) == "map" {
+      // recurse into nested maps
+      @include export-css-vars($value, $var-name);
+    } @else {
+      // emit CSS variable
+      --#{$var-name}: #{$value};
+    }
+  }
+}
+
+@mixin export-color-vars {
+  @include export-css-vars($color-pallette, "theme-palette");
+  @include export-css-vars($color, "theme-color");
+}
+
+:root {
+  // required for Nextv16 because it uses lightning.css by default,
+  // which will mess up our color scheme if we don't have this
+  // property set to inform it (and the browser) which system color schemes
+  // we should support.
+  color-scheme: light dark;
+}

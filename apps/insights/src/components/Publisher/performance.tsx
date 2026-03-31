@@ -7,6 +7,7 @@ import { EntityList } from "@pythnetwork/component-library/EntityList";
 import { Link } from "@pythnetwork/component-library/Link";
 import type { Variant as NoResultsVariant } from "@pythnetwork/component-library/NoResults";
 import { NoResults } from "@pythnetwork/component-library/NoResults";
+import { SymbolPairTag } from "@pythnetwork/component-library/SymbolPairTag";
 import { Table } from "@pythnetwork/component-library/Table";
 import { lookup } from "@pythnetwork/known-publishers";
 import { notFound } from "next/navigation";
@@ -15,7 +16,7 @@ import type { ReactNode, ComponentProps } from "react";
 import { getPriceFeeds } from "./get-price-feeds";
 import styles from "./performance.module.scss";
 import { TopFeedsTable } from "./top-feeds-table";
-import { getPublishers } from "../../services/clickhouse";
+import { getPublishersWithRankings } from "../../get-publishers-with-rankings";
 import type { Cluster } from "../../services/pyth";
 import { ClusterToName, parseCluster } from "../../services/pyth";
 import { Status } from "../../status";
@@ -25,7 +26,6 @@ import {
   ExplainAverage,
 } from "../Explanations";
 import { PriceFeedIcon } from "../PriceFeedIcon";
-import { PriceFeedTag } from "../PriceFeedTag";
 import { PublisherIcon } from "../PublisherIcon";
 import { PublisherTag } from "../PublisherTag";
 import { Ranking } from "../Ranking";
@@ -48,7 +48,7 @@ export const Performance = async ({ params }: Props) => {
     notFound();
   }
   const [publishers, priceFeeds] = await Promise.all([
-    getPublishers(parsedCluster),
+    getPublishersWithRankings(parsedCluster),
     getPriceFeeds(parsedCluster, key),
   ]);
   const slicedPublishers = sliceAround(
@@ -63,7 +63,7 @@ export const Performance = async ({ params }: Props) => {
       prefetch: false,
       nameAsString: knownPublisher?.name ?? publisher.key,
       data: {
-        ranking: (
+        ranking: (publisher.rank !== undefined || publisher.key === key) && (
           <Ranking isCurrent={publisher.key === key} className={styles.ranking}>
             {publisher.rank}
           </Ranking>
@@ -86,7 +86,7 @@ export const Performance = async ({ params }: Props) => {
             {publisher.inactiveFeeds}
           </Link>
         ),
-        averageScore: (
+        averageScore: publisher.averageScore !== undefined && (
           <Score width={PUBLISHER_SCORE_WIDTH} score={publisher.averageScore} />
         ),
         name: (
@@ -305,12 +305,7 @@ const getFeedRows = (
       rank: ranking.final_rank,
       status,
       firstEvaluation: ranking.first_ranking_time,
-      icon: (
-        <PriceFeedIcon
-          assetClass={feed.product.asset_type}
-          symbol={feed.symbol}
-        />
-      ),
+      icon: <PriceFeedIcon assetClass={feed.product.asset_type} />,
       href: `/price-feeds/${encodeURIComponent(feed.symbol)}`,
     }));
 
@@ -365,7 +360,7 @@ const TopFeedsCard = ({
       <TopFeedsTable
         label={`${title} Feeds`}
         publisherScoreWidth={PUBLISHER_SCORE_WIDTH}
-        nameLoadingSkeleton={<PriceFeedTag isLoading />}
+        nameLoadingSkeleton={<SymbolPairTag isLoading />}
         {...(props.isLoading
           ? { isLoading: true }
           : {
@@ -378,7 +373,7 @@ const TopFeedsCard = ({
       <NoResults
         icon={emptyIcon}
         header={emptyHeader}
-        body={emptyBody}
+        body={<p>{emptyBody}</p>}
         variant={emptyVariant}
       />
     )}
